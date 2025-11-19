@@ -1,0 +1,54 @@
+# Node
+node_modules/
+.npm/
+.next/
+.next-standalone/
+.next-cache/
+.yarn/
+.pnpm-store/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.eggs/
+*.egg-info/
+.venv/
+.env
+.env.local
+.env.production
+.envrc
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+prisma/migrations/*/migration.sql
+
+# Kubernetes local artifacts
+.kube/
+
+# Coverage / reports
+coverage/
+.coverage
+pytest_cache/
+
+# Build outputs
+build/
+dist/
+*.egg
+
+# Docker
+*.tar
+
+# Misc
+.idea/
+.vscode/
