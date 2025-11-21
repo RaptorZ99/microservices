@@ -20,6 +20,14 @@ spec:
           ports:
             - containerPort: 8000
 
+          env:
+            - name: DATABASE_URL
+              value: "sqlite:////data/auth.db"
+
+          volumeMounts:
+            - name: auth-storage
+              mountPath: /data
+
           # Vérifie régulièrement si le service fonctionne
           livenessProbe:
             httpGet:
@@ -35,3 +43,8 @@ spec:
               port: 8000
             initialDelaySeconds: 2
             periodSeconds: 5
+
+      volumes:
+        - name: auth-storage
+          persistentVolumeClaim:
+            claimName: auth-pvc

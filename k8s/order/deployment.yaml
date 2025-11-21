@@ -14,6 +14,24 @@ spec:
       labels:
         app: order-service
     spec:
+      initContainers:
+        - name: init-order-db
+          image: louisscrf/order-service:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              if [ -d /mnt/prisma/dev.db ]; then
+                rm -rf /mnt/prisma/dev.db
+              fi
+              if [ ! -f /mnt/prisma/dev.db ]; then
+                mkdir -p /mnt/prisma
+                cp -r /app/prisma/. /mnt/prisma/
+              fi
+          volumeMounts:
+            - name: order-storage
+              mountPath: /mnt/prisma
+
       containers:
         - name: order-service
           image: louisscrf/order-service:latest
@@ -27,6 +45,10 @@ spec:
               value: "change-me"
             - name: PORT
               value: "4000"
+
+          volumeMounts:
+            - name: order-storage
+              mountPath: /app/prisma
 
           # Vérifie si l’app répond
           livenessProbe:
@@ -43,3 +65,8 @@ spec:
               port: 4000
             initialDelaySeconds: 2
             periodSeconds: 5
+
+      volumes:
+        - name: order-storage
+          persistentVolumeClaim:
+            claimName: order-pvc

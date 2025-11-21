@@ -7,7 +7,7 @@ import { cookies } from 'next/headers'
  * Utilise l'API cookies() (asynchrone) :
  *   const cookieStore = await cookies()
  */
-export async function POST(request: Request) {
+export async function POST() {
   const cookieStore = await cookies()
 
   // Lecture du refresh_token dans les cookies

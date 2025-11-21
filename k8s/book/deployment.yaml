@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-service
+  labels:
+    app: book-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-service
+  template:
+    metadata:
+      labels:
+        app: book-service
+    spec:
+      initContainers:
+        - name: init-book-db
+          image: louisscrf/book-service:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              if [ -d /mnt/prisma/dev.db ]; then
+                rm -rf /mnt/prisma/dev.db
+              fi
+              if [ ! -f /mnt/prisma/dev.db ]; then
+                mkdir -p /mnt/prisma
+                cp -r /app/prisma/. /mnt/prisma/
+              fi
+          volumeMounts:
+            - name: book-storage
+              mountPath: /mnt/prisma
+
+      containers:
+        - name: book-service
+          image: louisscrf/book-service:latest
+          ports:
+            - containerPort: 9000
+          env:
+            - name: DATABASE_URL
+              value: "file:./dev.db"
+            - name: JWT_SECRET
+              value: "change-me"
+            - name: PORT
+              value: "9000"
+            - name: OPENLIBRARY_USER_AGENT
+              value: "BookInsights/1.0 (contact@example.com)"
+            - name: BOOK_SEARCH_LIMIT
+              value: "12"
+
+          volumeMounts:
+            - name: book-storage
+              mountPath: /app/prisma
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+      volumes:
+        - name: book-storage
+          persistentVolumeClaim:
+            claimName: book-pvc

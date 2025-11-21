@@ -31,7 +31,7 @@ export function serverApi(baseURL?: string) {
     /**
      * Requête POST standardisée
      */
-    async post(path: string, body?: any, options?: RequestInit) {
+    async post(path: string, body?: unknown, options?: RequestInit) {
       const res = await fetch(`${root}${path}`, {
         ...options,
         method: 'POST',

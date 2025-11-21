@@ -20,7 +20,21 @@ services:
     env_file:
       - ./order-service/.env
     volumes:
-      - order_db_data:/app/prisma/db
+      - order_db_data:/app/prisma
+    depends_on:
+      - auth-service
+    restart: unless-stopped
+
+  book-service:
+    build:
+      context: ./book-service
+    container_name: book-service
+    ports:
+      - "9000:9000"
+    env_file:
+      - ./book-service/.env
+    volumes:
+      - book_db_data:/app/prisma
     depends_on:
       - auth-service
     restart: unless-stopped
@@ -36,8 +50,10 @@ services:
     depends_on:
       - auth-service
       - order-service
+      - book-service
     restart: unless-stopped
 
 volumes:
   auth_db_data:
   order_db_data:
+  book_db_data:

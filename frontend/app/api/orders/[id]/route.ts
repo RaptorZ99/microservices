@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from 'next/server'
  * → transmet la requête au microservice OrderService (NestJS)
  * → renvoie le résultat au frontend
  */
-export async function DELETE(req: NextRequest, context: any) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   /**
    * Extraction du JWT :
    * Les cookies côté Next.js (App Router) sont accessibles via req.cookies.
@@ -57,7 +60,7 @@ export async function DELETE(req: NextRequest, context: any) {
      */
     const data = await response.json()
     return NextResponse.json(data, { status: response.status })
-  } catch (err) {
+  } catch {
     /**
      * Gestion d'erreurs réseau ou internes.
      * Ici, cela signifie que la communication entre Next.js et

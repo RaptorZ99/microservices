@@ -57,3 +57,14 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 # Endpoint JWKS (.well-known/jwks.json), utile pour la validation des clés JWT.
 app.include_router(jwks_router, tags=["jwks"])
+
+
+@app.get("/health")
+def health():
+    """
+    Endpoint de supervision pour Kubernetes / docker.
+    """
+    return {
+        "status": "ok",
+        "service": "auth-service",
+    }

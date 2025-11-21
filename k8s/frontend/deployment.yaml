@@ -25,3 +25,5 @@ spec:
               value: "http://auth-service:8000"
             - name: ORDER_SERVICE_URL
               value: "http://order-service:4000/orders"
+            - name: BOOK_SERVICE_URL
+              value: "http://book-service:9000/books"
