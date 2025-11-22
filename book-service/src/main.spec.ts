@@ -20,13 +20,16 @@ describe('main bootstrap', () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     jest.isolateModules(() => {
-      require('./main');
+      import('./main.js');
     });
     await new Promise(setImmediate);
 
     expect(createMock).toHaveBeenCalledWith(expect.any(Function));
     expect(useGlobalPipes).toHaveBeenCalledTimes(1);
-    expect(enableCors).toHaveBeenCalledWith({ origin: true, credentials: true });
+    expect(enableCors).toHaveBeenCalledWith({
+      origin: true,
+      credentials: true,
+    });
     expect(listen).toHaveBeenCalledWith(9100);
     expect(logSpy).toHaveBeenCalled();
 
@@ -43,7 +46,7 @@ describe('main bootstrap', () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     jest.isolateModules(() => {
-      require('./main');
+      import('./main.js');
     });
     await new Promise(setImmediate);
 
