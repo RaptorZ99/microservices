@@ -2,7 +2,8 @@ from sqlmodel import create_engine, SQLModel, Session
 import os
 
 # URL de la base SQLite (modifiable via .env)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./auth.db")
+# Par défaut, la DB est stockée dans /app/db (volume Docker Compose).
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////app/db/auth.db")
 
 # Moteur SQLAlchemy/SQLModel
 engine = create_engine(DATABASE_URL, echo=False)

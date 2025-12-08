@@ -34,8 +34,6 @@ ENV PORT=4000
 ENV DATABASE_URL="file:/app/prisma/dev.db"
 ENV JWT_SECRET="change-me"
 
-RUN npx prisma migrate deploy
-
 EXPOSE 4000
 
-CMD ["node", "dist/src/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]

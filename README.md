@@ -40,14 +40,14 @@ Utilisateur → Next.js (cookies httpOnly) → Auth Service
 ## Variables d’environnement (Docker Compose)
 Les fichiers `.env` sont déjà fournis dans chaque dossier et référencés par `docker-compose.yml`. Points importants :
 - `JWT_SECRET` doit être identique dans `auth-service`, `order-service`, `book-service` et la gateway.
-- Pour persister SQLite côté Auth en Compose, utiliser un chemin dans le volume monté (`DATABASE_URL=sqlite:////app/db/auth.db`), sinon la valeur par défaut crée `auth.db` à la racine du conteneur.
+- Le chemin par défaut de l’Auth Service pointe déjà sur le volume (`DATABASE_URL=sqlite:////app/db/auth.db`) monté par `auth_db_data`.
 - OpenLibrary : `OPENLIBRARY_USER_AGENT` et `BOOK_SEARCH_LIMIT` pilotent l’appel externe.
 
 Exemple de configuration (valeurs par défaut fournies) :
 
 `auth-service/.env`
 ```conf
-DATABASE_URL=sqlite:///./auth.db
+DATABASE_URL=sqlite:////app/db/auth.db
 JWT_SECRET=change-me
 JWT_ALGO=HS256
 ACCESS_TOKEN_EXPIRES_MIN=60
@@ -105,7 +105,7 @@ Prérequis : Docker + Docker Compose.
 7) Arrêt :  
 `docker compose down` (ajouter `-v` pour supprimer les volumes SQLite et repartir d’un état vierge).
 
-Volumes utilisés : `auth_db_data` (si DB pointée vers `/app/db`), `order_db_data` (`/app/prisma/dev.db`), `book_db_data` (`/app/prisma/dev.db`).
+Volumes utilisés : `auth_db_data` (`/app/db/auth.db`), `order_db_data` (`/app/prisma/dev.db`), `book_db_data` (`/app/prisma/dev.db`).
 
 ## API de référence
 - **Auth Service (FastAPI)** :  

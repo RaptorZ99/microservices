@@ -28,8 +28,6 @@ ENV JWT_SECRET="change-me"
 ENV OPENLIBRARY_USER_AGENT="BookInsights/1.0 (contact@example.com)"
 ENV BOOK_SEARCH_LIMIT=12
 
-RUN mkdir -p /app/prisma && npx prisma migrate deploy
-
 EXPOSE 9000
 
-CMD ["node", "dist/src/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]
