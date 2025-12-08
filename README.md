@@ -138,15 +138,7 @@ Prérequis : `kubectl`, `minikube`, addon `ingress`.
 1) D démarrer le cluster :  
 `minikube start --driver=docker`
 
-2) Construire les images avec les tags attendus par les manifests :  
-```bash
-minikube image build -t louisscrf/auth-service:latest auth-service
-minikube image build -t louisscrf/order-service:latest order-service
-minikube image build -t louisscrf/book-service:latest book-service
-minikube image build -t louisscrf/frontend:latest frontend
-```
-
-3) Déployer le namespace puis les ressources :  
+2) Déployer le namespace puis les ressources :  
 ```bash
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/auth -n microservices
@@ -156,20 +148,20 @@ kubectl apply -f k8s/frontend -n microservices
 kubectl apply -f k8s/ingress -n microservices
 ```
 
-4) Activer et exposer l’ingress :  
+3) Activer et exposer l’ingress :  
 ```bash
 minikube addons enable ingress
 minikube tunnel            # laisser ouvert
 echo "127.0.0.1 devops.local" | sudo tee -a /etc/hosts
 ```
 
-5) Vérifications rapides :  
+4) Vérifications rapides :  
 `kubectl get pods,svc,ingress -n microservices`  
 `kubectl logs deploy/auth-service -n microservices` (ou autres deployments)
 
-6) Accès utilisateur : `http://devops.local` (service `frontend` exposé par l’Ingress).
+5) Accès utilisateur : `http://devops.local` (service `frontend` exposé par l’Ingress).
 
-7) Nettoyage complet :  
+6) Nettoyage complet :  
 `kubectl delete ns microservices` (supprime deployments, services et PVC SQLite).
 
 ## Supervision et tests
