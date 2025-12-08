@@ -20,7 +20,7 @@ describe('main bootstrap', () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     jest.isolateModules(() => {
-      import('./main.js');
+      require('./main');
     });
     await new Promise(setImmediate);
 
@@ -46,7 +46,7 @@ describe('main bootstrap', () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     jest.isolateModules(() => {
-      import('./main.js');
+      require('./main');
     });
     await new Promise(setImmediate);
 
