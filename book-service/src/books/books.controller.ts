@@ -11,6 +11,7 @@ import {
 import { BooksService } from './books.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { User } from '../auth/user.decorator';
+import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { AddBookDto } from './dto/add-book.dto';
 
 @Controller('books')
@@ -26,17 +27,17 @@ export class BooksController {
   }
 
   @Get('library')
-  library(@User() user: any) {
+  library(@User() user: JwtPayload) {
     return this.booksService.listLibrary(user.sub);
   }
 
   @Post('library')
-  add(@User() user: any, @Body() dto: AddBookDto) {
+  add(@User() user: JwtPayload, @Body() dto: AddBookDto) {
     return this.booksService.addBook(user.sub, dto);
   }
 
   @Delete('library/:workId')
-  remove(@User() user: any, @Param('workId') workId: string) {
+  remove(@User() user: JwtPayload, @Param('workId') workId: string) {
     return this.booksService.remove(user.sub, workId);
   }
 

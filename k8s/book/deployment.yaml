@@ -14,24 +14,6 @@ spec:
       labels:
         app: book-service
     spec:
-      initContainers:
-        - name: init-book-db
-          image: louisscrf/book-service:latest
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -e
-              if [ -d /mnt/prisma/dev.db ]; then
-                rm -rf /mnt/prisma/dev.db
-              fi
-              if [ ! -f /mnt/prisma/dev.db ]; then
-                mkdir -p /mnt/prisma
-                cp -r /app/prisma/. /mnt/prisma/
-              fi
-          volumeMounts:
-            - name: book-storage
-              mountPath: /mnt/prisma
-
       containers:
         - name: book-service
           image: louisscrf/book-service:latest
@@ -39,7 +21,7 @@ spec:
             - containerPort: 9000
           env:
             - name: DATABASE_URL
-              value: "file:./dev.db"
+              value: "file:/app/data/dev.db"
             - name: JWT_SECRET
               value: "change-me"
             - name: PORT
@@ -51,7 +33,7 @@ spec:
 
           volumeMounts:
             - name: book-storage
-              mountPath: /app/prisma
+              mountPath: /app/data
           livenessProbe:
             httpGet:
               path: /health

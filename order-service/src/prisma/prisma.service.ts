@@ -1,14 +1,24 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
-/**
- * Service global pour gérer la connexion Prisma (ORM SQLite)
- * - Initialise et connecte Prisma au démarrage
- * - Fournit PrismaClient à l'ensemble des modules Nest
- */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  constructor() {
+    const adapter = new PrismaBetterSqlite3({
+      url: process.env.DATABASE_URL || 'file:/app/data/dev.db',
+    });
+    super({ adapter });
+  }
+
   async onModuleInit() {
     await this.$connect();
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
   }
 }

@@ -19,24 +19,23 @@ spec:
           image: louisscrf/auth-service:latest
           ports:
             - containerPort: 8000
-
           env:
             - name: DATABASE_URL
-              value: "sqlite:////data/auth.db"
+              value: "sqlite:////app/db/auth.db"
+            - name: JWT_SECRET
+              value: "change-me"
+            - name: CORS_ORIGINS
+              value: "http://devops.local"
 
           volumeMounts:
             - name: auth-storage
-              mountPath: /data
-
-          # Vérifie régulièrement si le service fonctionne
+              mountPath: /app/db
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
-
-          # Vérifie si le service est prêt à recevoir du trafic
           readinessProbe:
             httpGet:
               path: /health

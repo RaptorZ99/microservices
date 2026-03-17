@@ -22,7 +22,7 @@ export default function LoginPage() {
 
     setL(false)
     if (res.ok) {
-      window.location.href = '/dashboard'
+      window.location.href = '/order'
     } else {
       const j = await res.json().catch(() => ({ detail: 'Erreur' }))
       setErr(j.detail || 'Échec de connexion')

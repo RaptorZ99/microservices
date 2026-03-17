@@ -4,18 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const links = [
-  { href: '/dashboard/order', label: 'Commandes' },
-  { href: '/dashboard/book', label: 'Livres' },
+  { href: '/order', label: 'Commandes' },
+  { href: '/book', label: 'Livres' },
 ]
 
-export default function DashboardNav() {
+export default function Nav() {
   const pathname = usePathname()
 
   return (
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="flex items-center gap-4 py-4">
-          <p className="font-semibold text-gray-800 text-lg flex-1">Dashboard</p>
+          <p className="font-semibold text-gray-800 text-lg flex-1">BookInsights</p>
           <div className="flex gap-2">
             {links.map((link) => {
               const active = pathname?.startsWith(link.href)
