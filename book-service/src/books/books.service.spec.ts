@@ -91,9 +91,9 @@ describe('BooksService', () => {
       );
       (prisma.libraryEntry.create as jest.Mock).mockRejectedValue(duplicateErr);
 
-      await expect(service.addBook('u1', { workId: 'W1' })).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.addBook('u1', { workId: 'W1' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

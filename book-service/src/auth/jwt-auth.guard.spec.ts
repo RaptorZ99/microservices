@@ -22,16 +22,16 @@ describe('JwtAuthGuard', () => {
   });
 
   it('throws when header is malformed', () => {
-    expect(() => guard.canActivate(ctxFor({ authorization: 'Token abc' })) ).toThrow(
-      UnauthorizedException,
-    );
+    expect(() =>
+      guard.canActivate(ctxFor({ authorization: 'Token abc' })),
+    ).toThrow(UnauthorizedException);
   });
 
   it('rejects invalid token', () => {
     const token = jwt.sign({ sub: 'u1' }, 'wrong');
-    expect(() => guard.canActivate(ctxFor({ authorization: `Bearer ${token}` })) ).toThrow(
-      UnauthorizedException,
-    );
+    expect(() =>
+      guard.canActivate(ctxFor({ authorization: `Bearer ${token}` })),
+    ).toThrow(UnauthorizedException);
   });
 
   it('accepts valid token with secret and attaches payload', () => {

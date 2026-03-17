@@ -1,5 +1,5 @@
 import { ExecutionContext } from '@nestjs/common';
-import { User, getUserFromContext } from './user.decorator';
+import { getUserFromContext } from './user.decorator';
 
 describe('User decorator', () => {
   it('returns req.user', () => {
