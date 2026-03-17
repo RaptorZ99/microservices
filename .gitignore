@@ -1,54 +1,133 @@
-# Node
-node_modules/
-.npm/
-.next/
-.next-standalone/
-.next-cache/
-.yarn/
-.pnpm-store/
-*.log
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.eggs/
-*.egg-info/
-.venv/
+# ============================================================
+# SECRETS ET VARIABLES D'ENVIRONNEMENT
+# ============================================================
 .env
 .env.local
+.env.*.local
 .env.production
-.envrc
+.env.staging
+k8s/secrets.yaml
 
-# Databases
+# ============================================================
+# NEXT.JS (frontend)
+# ============================================================
+frontend/.next/
+frontend/out/
+frontend/.cache/
+frontend/build/
+
+# ============================================================
+# NODE.JS (frontend + order-service)
+# ============================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm/
+.yarn/
+
+# ============================================================
+# PYTHON (auth-service)
+# ============================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ============================================================
+# BASES DE DONNEES SQLITE
+# ============================================================
 *.db
 *.sqlite
 *.sqlite3
 
-# OS
+# ============================================================
+# PRISMA (order-service)
+# ============================================================
+order-service/prisma/dev.db
+order-service/prisma/dev.db-journal
+order-service/prisma/*.db-shm
+order-service/prisma/*.db-wal
+
+# ============================================================
+# DOCKER
+# ============================================================
+.docker/
+
+# ============================================================
+# SYSTEMES D'EXPLOITATION
+# ============================================================
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
 
-# Prisma
-prisma/migrations/*/migration.sql
+# Linux
+*~
 
-# Kubernetes local artifacts
-.kube/
+# ============================================================
+# EDITEURS ET IDEs
+# ============================================================
 
-# Coverage / reports
-coverage/
-.coverage
-pytest_cache/
-
-# Build outputs
-build/
-dist/
-*.egg
-
-# Docker
-*.tar
-
-# Misc
-.idea/
+# VSCode
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# JetBrains (IntelliJ, WebStorm, PyCharm...)
+.idea/
+*.iml
+*.iws
+
+# Vim / Neovim
+*.swp
+*.swo
+Session.vim
+
+# ============================================================
+# LOGS ET RAPPORTS (generes par la CI)
+# ============================================================
+logs/
+*.log
+coverage/
+test-results/
+junit*.xml
+trivy-*.json
+semgrep-*.json
+gitleaks-*.json
+sonar-report/
+
+# ============================================================
+# DIVERS
+# ============================================================
+*.pem
+*.key
+*.cert
+*.p12
+tmp/
+.tmp/

@@ -1,0 +1,42 @@
+# =============================================================
+# Pipeline CI — auth-service (FastAPI / Python)
+# =============================================================
+
+auth:lint:
+  stage: lint
+  image: python:3.12-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
+      changes: [auth-service/**/*]
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
+      changes: [auth-service/**/*]
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [auth-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      changes: [auth-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  cache:
+    key: auth-${CI_COMMIT_REF_SLUG}
+    paths:
+      - auth-service/.pip-cache/
+  script:
+    - cd auth-service
+    - pip install --cache-dir .pip-cache ruff
+    - ruff check .
+    - ruff format --check .
+
+auth:build:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      changes: [auth-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  needs:
+    - job: auth:lint
+      optional: true
+  script:
+    - cd auth-service
+    - docker build -t auth-service .

@@ -1,0 +1,11 @@
+# Chaque service a un responsable
+# Remplacez les @username par vos identifiants GitLab
+
+/frontend/              @loulou.scarfone
+/auth-service/          @loulou.scarfone
+/order-service/         @loulou.scarfone
+/book-service/          @loulou.scarfone
+
+# Le pipeline est sous responsabilite de tous
+/.gitlab-ci.yml         @loulou.scarfone
+/.gitlab/ci/            @loulou.scarfone

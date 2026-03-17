@@ -1,0 +1,86 @@
+# =============================================================
+# Pipeline CI — book-service (NestJS)
+# =============================================================
+
+book:lint:
+  stage: lint
+  image: node:22-alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
+      changes: [book-service/**/*]
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  cache:
+    key: book-${CI_COMMIT_REF_SLUG}
+    paths:
+      - book-service/node_modules/
+      - book-service/.npm/
+  script:
+    - cd book-service
+    - npm ci --cache .npm --prefer-offline
+    - npx prisma generate
+    - npm run lint
+
+book:build:
+  stage: build
+  image: node:22-alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  needs:
+    - job: book:lint
+      optional: true
+  cache:
+    key: book-${CI_COMMIT_REF_SLUG}
+    paths:
+      - book-service/node_modules/
+      - book-service/.npm/
+  script:
+    - cd book-service
+    - npm ci --cache .npm --prefer-offline
+    - npx prisma generate
+    - npm run build
+  artifacts:
+    paths:
+      - book-service/dist/
+    expire_in: 1 hour
+
+book:test:
+  stage: test
+  image: node:22-alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
+      changes: [book-service/**/*]
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      changes: [book-service/**/*]
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  needs:
+    - job: book:lint
+      optional: true
+  cache:
+    key: book-${CI_COMMIT_REF_SLUG}
+    paths:
+      - book-service/node_modules/
+      - book-service/.npm/
+  script:
+    - cd book-service
+    - npm ci --cache .npm --prefer-offline
+    - npx prisma generate
+    - npm run test
+  artifacts:
+    when: always
+    reports:
+      junit: book-service/junit*.xml
+    paths:
+      - book-service/coverage/
+    expire_in: 1 week

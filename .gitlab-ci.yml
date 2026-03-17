@@ -1,0 +1,36 @@
+# =============================================================
+# Point d'entree du pipeline CI/CD — mono-repo microservices
+# =============================================================
+
+stages:
+  - lint
+  - build
+  - test
+  - scan
+  - deploy
+
+# -----------------------------------------------------------
+# Regles reutilisables
+# -----------------------------------------------------------
+.rules:feature:
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+.rules:develop:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+.rules:main:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# -----------------------------------------------------------
+# Includes — un fichier CI par service
+# -----------------------------------------------------------
+include:
+  - local: '.gitlab/ci/frontend.yml'
+  - local: '.gitlab/ci/auth-service.yml'
+  - local: '.gitlab/ci/order-service.yml'
+  - local: '.gitlab/ci/book-service.yml'
