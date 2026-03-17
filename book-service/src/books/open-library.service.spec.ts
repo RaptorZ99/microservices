@@ -14,25 +14,26 @@ describe('OpenLibraryService', () => {
     it('maps search results to previews for title scope', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: async () => ({
-          docs: [
-            {
-              key: '/works/W1',
-              title: 'Dune',
-              author_name: ['Frank Herbert'],
-              first_publish_year: 1965,
-              cover_i: 123,
-              editions: {
-                docs: [
-                  { title: 'First ed', publish_date: '1966', covers: [456] },
-                ],
+        json: () =>
+          Promise.resolve({
+            docs: [
+              {
+                key: '/works/W1',
+                title: 'Dune',
+                author_name: ['Frank Herbert'],
+                first_publish_year: 1965,
+                cover_i: 123,
+                editions: {
+                  docs: [
+                    { title: 'First ed', publish_date: '1966', covers: [456] },
+                  ],
+                },
               },
-            },
-            {
-              title: 'Missing key',
-            },
-          ],
-        }),
+              {
+                title: 'Missing key',
+              },
+            ],
+          }),
       });
 
       const results = await service.search('dune', 'title');
@@ -57,23 +58,29 @@ describe('OpenLibraryService', () => {
       // fetchWork
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
-          key: '/works/W1',
-          title: 'Dune',
-          first_publish_date: '1965',
-          authors: [{ author: { key: '/authors/A1' } }],
-          covers: [321],
-        }),
+        json: () =>
+          Promise.resolve({
+            key: '/works/W1',
+            title: 'Dune',
+            first_publish_date: '1965',
+            authors: [{ author: { key: '/authors/A1' } }],
+            covers: [321],
+          }),
       });
       // fetchAuthorName
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ name: 'Frank Herbert' }),
+        json: () => Promise.resolve({ name: 'Frank Herbert' }),
       });
       // fetchEditions
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ entries: [{ title: 'Hardcover', publish_date: '1966', covers: [654] }] }),
+        json: () =>
+          Promise.resolve({
+            entries: [
+              { title: 'Hardcover', publish_date: '1966', covers: [654] },
+            ],
+          }),
       });
 
       const summary = await service.workSummary('W1');
@@ -95,33 +102,35 @@ describe('OpenLibraryService', () => {
       // fetchWork
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
-          key: '/works/W9',
-          title: 'Book',
-          description: { value: 'A book' },
-          subjects: ['s1', 's2', 's3'],
-          covers: [101, 102],
-          authors: [{ author: { key: '/authors/A9' } }],
-          links: [
-            { title: 'Link', url: 'https://example.com' },
-            { title: 'Broken', url: '' },
-          ],
-        }),
+        json: () =>
+          Promise.resolve({
+            key: '/works/W9',
+            title: 'Book',
+            description: { value: 'A book' },
+            subjects: ['s1', 's2', 's3'],
+            covers: [101, 102],
+            authors: [{ author: { key: '/authors/A9' } }],
+            links: [
+              { title: 'Link', url: 'https://example.com' },
+              { title: 'Broken', url: '' },
+            ],
+          }),
       });
       // fetchAuthorName
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ name: 'Author' }),
+        json: () => Promise.resolve({ name: 'Author' }),
       });
       // fetchEditions
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
-          entries: [
-            { key: 'E1', title: 'Ed1', publish_date: '2000', covers: [201] },
-            { key: 'E2', title: 'Ed2', publish_date: '2001', covers: [202] },
-          ],
-        }),
+        json: () =>
+          Promise.resolve({
+            entries: [
+              { key: 'E1', title: 'Ed1', publish_date: '2000', covers: [201] },
+              { key: 'E2', title: 'Ed2', publish_date: '2001', covers: [202] },
+            ],
+          }),
       });
 
       const detail = await service.workDetails('W9');
@@ -129,14 +138,20 @@ describe('OpenLibraryService', () => {
       expect(detail.workId).toBe('W9');
       expect(detail.authors).toEqual(['Author']);
       expect(detail.coverGallery?.length).toBeGreaterThan(0);
-      expect(detail.links).toEqual([{ title: 'Link', url: 'https://example.com' }]);
+      expect(detail.links).toEqual([
+        { title: 'Link', url: 'https://example.com' },
+      ]);
       expect(detail.editions[0]).toMatchObject({ key: 'E1', title: 'Ed1' });
     });
   });
 
   describe('fetchJson', () => {
     it('throws on non-ok responses', async () => {
-      fetchMock.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
+      });
       await expect(
         (service as any).fetchJson('/works/W1', { limit: '1' }),
       ).rejects.toThrow('OpenLibrary');

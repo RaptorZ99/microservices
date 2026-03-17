@@ -51,7 +51,12 @@ describe('OrdersService', () => {
   });
 
   it('findOne() should fetch a single order for the user', async () => {
-    const order = { id: 3, user: 'u1', item: 'notebook', createdAt: new Date() };
+    const order = {
+      id: 3,
+      user: 'u1',
+      item: 'notebook',
+      createdAt: new Date(),
+    };
     prisma.order.findFirst.mockResolvedValue(order);
 
     const result = await service.findOne(3, 'u1');
