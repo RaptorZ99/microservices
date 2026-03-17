@@ -1,86 +1,48 @@
-# =============================================================
-# Pipeline CI — book-service (NestJS)
-# =============================================================
+# ─────────────────────────────────────────────────────────
+# Pipeline Book Service (NestJS)
+# ─────────────────────────────────────────────────────────
 
-book:lint:
-  stage: lint
-  image: node:22-alpine
+.book:rules:
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-      changes: [book-service/**/*]
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - changes:
+        - book-service/**/*
+        - .gitlab/ci/book-service.yml
+        - .gitlab-ci.yml
+
+lint:book-service:
+  stage: lint
+  image: node:20-alpine
+  extends: .book:rules
   cache:
-    key: book-${CI_COMMIT_REF_SLUG}
+    key: "book-deps-$CI_COMMIT_REF_SLUG"
     paths:
       - book-service/node_modules/
-      - book-service/.npm/
+  variables:
+    DATABASE_URL: "file:/tmp/dev.db"
   script:
+    - echo "=== Lint Book Service ==="
     - cd book-service
-    - npm ci --cache .npm --prefer-offline
+    - npm ci
     - npx prisma generate
     - npm run lint
 
-book:build:
+build:book-service:
   stage: build
-  image: node:22-alpine
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  needs:
-    - job: book:lint
-      optional: true
+  image: node:20-alpine
+  extends: .book:rules
   cache:
-    key: book-${CI_COMMIT_REF_SLUG}
+    key: "book-deps-$CI_COMMIT_REF_SLUG"
     paths:
       - book-service/node_modules/
-      - book-service/.npm/
+  variables:
+    DATABASE_URL: "file:/tmp/dev.db"
   script:
+    - echo "=== Build Book Service ==="
     - cd book-service
-    - npm ci --cache .npm --prefer-offline
+    - npm ci
     - npx prisma generate
     - npm run build
   artifacts:
     paths:
       - book-service/dist/
     expire_in: 1 hour
-
-book:test:
-  stage: test
-  image: node:22-alpine
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-      changes: [book-service/**/*]
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [book-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  needs:
-    - job: book:lint
-      optional: true
-  cache:
-    key: book-${CI_COMMIT_REF_SLUG}
-    paths:
-      - book-service/node_modules/
-      - book-service/.npm/
-  script:
-    - cd book-service
-    - npm ci --cache .npm --prefer-offline
-    - npx prisma generate
-    - npm run test
-  artifacts:
-    when: always
-    reports:
-      junit: book-service/junit*.xml
-    paths:
-      - book-service/coverage/
-    expire_in: 1 week

@@ -1,42 +1,49 @@
-# =============================================================
-# Pipeline CI — auth-service (FastAPI / Python)
-# =============================================================
+# ─────────────────────────────────────────────────────────
+# Pipeline Auth Service (FastAPI)
+# ─────────────────────────────────────────────────────────
 
-auth:lint:
+.auth:rules:
+  rules:
+    - changes:
+        - auth-service/**/*
+        - .gitlab/ci/auth-service.yml
+        - .gitlab-ci.yml
+
+lint:auth-service:
   stage: lint
   image: python:3.12-slim
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-      changes: [auth-service/**/*]
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-      changes: [auth-service/**/*]
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [auth-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [auth-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
+  extends: .auth:rules
   cache:
-    key: auth-${CI_COMMIT_REF_SLUG}
+    key: "auth-deps-$CI_COMMIT_REF_SLUG"
     paths:
-      - auth-service/.pip-cache/
+      - auth-service/.venv/
   script:
+    - echo "=== Lint Auth Service ==="
     - cd auth-service
-    - pip install --cache-dir .pip-cache ruff
-    - ruff check .
-    - ruff format --check .
+    - python -m venv .venv
+    - .venv/bin/pip install --upgrade pip -q
+    - .venv/bin/pip install -r requirements.txt -q
+    - .venv/bin/pip install flake8 -q
+    - .venv/bin/flake8 . --count --max-line-length=120 --statistics --exclude=.venv
 
-auth:build:
+build:auth-service:
   stage: build
-  image: docker:27
-  services:
-    - docker:27-dind
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [auth-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  needs:
-    - job: auth:lint
-      optional: true
+  image: python:3.12-slim
+  extends: .auth:rules
+  cache:
+    key: "auth-deps-$CI_COMMIT_REF_SLUG"
+    paths:
+      - auth-service/.venv/
   script:
+    - echo "=== Build Auth Service ==="
     - cd auth-service
-    - docker build -t auth-service .
+    - python -m venv .venv
+    - .venv/bin/pip install --upgrade pip -q
+    - .venv/bin/pip install -r requirements.txt -q
+    - echo "✓ Auth Service — dépendances installées et service prêt"
+  artifacts:
+    paths:
+      - auth-service/
+    exclude:
+      - auth-service/.venv/**
+    expire_in: 1 hour

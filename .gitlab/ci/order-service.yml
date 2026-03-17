@@ -1,86 +1,48 @@
-# =============================================================
-# Pipeline CI — order-service (NestJS)
-# =============================================================
+# ─────────────────────────────────────────────────────────
+# Pipeline Order Service (NestJS)
+# ─────────────────────────────────────────────────────────
 
-order:lint:
-  stage: lint
-  image: node:22-alpine
+.order:rules:
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-      changes: [order-service/**/*]
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - changes:
+        - order-service/**/*
+        - .gitlab/ci/order-service.yml
+        - .gitlab-ci.yml
+
+lint:order-service:
+  stage: lint
+  image: node:20-alpine
+  extends: .order:rules
   cache:
-    key: order-${CI_COMMIT_REF_SLUG}
+    key: "order-deps-$CI_COMMIT_REF_SLUG"
     paths:
       - order-service/node_modules/
-      - order-service/.npm/
+  variables:
+    DATABASE_URL: "file:/tmp/dev.db"
   script:
+    - echo "=== Lint Order Service ==="
     - cd order-service
-    - npm ci --cache .npm --prefer-offline
+    - npm ci
     - npx prisma generate
     - npm run lint
 
-order:build:
+build:order-service:
   stage: build
-  image: node:22-alpine
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  needs:
-    - job: order:lint
-      optional: true
+  image: node:20-alpine
+  extends: .order:rules
   cache:
-    key: order-${CI_COMMIT_REF_SLUG}
+    key: "order-deps-$CI_COMMIT_REF_SLUG"
     paths:
       - order-service/node_modules/
-      - order-service/.npm/
+  variables:
+    DATABASE_URL: "file:/tmp/dev.db"
   script:
+    - echo "=== Build Order Service ==="
     - cd order-service
-    - npm ci --cache .npm --prefer-offline
+    - npm ci
     - npx prisma generate
     - npm run build
   artifacts:
     paths:
       - order-service/dist/
     expire_in: 1 hour
-
-order:test:
-  stage: test
-  image: node:22-alpine
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-      changes: [order-service/**/*]
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [order-service/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  needs:
-    - job: order:lint
-      optional: true
-  cache:
-    key: order-${CI_COMMIT_REF_SLUG}
-    paths:
-      - order-service/node_modules/
-      - order-service/.npm/
-  script:
-    - cd order-service
-    - npm ci --cache .npm --prefer-offline
-    - npx prisma generate
-    - npm run test
-  artifacts:
-    when: always
-    reports:
-      junit: order-service/junit*.xml
-    paths:
-      - order-service/coverage/
-    expire_in: 1 week

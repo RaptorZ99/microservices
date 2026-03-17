@@ -1,36 +1,86 @@
-# =============================================================
-# Point d'entree du pipeline CI/CD — mono-repo microservices
-# =============================================================
+# ═══════════════════════════════════════════════════════════════════
+# Pipeline CI/CD — Projet Microservices
+# Architecture : mono-repo / 4 services + frontend
+# Stratégie : Gitflow simplifié (main / develop / feature/*)
+# ═══════════════════════════════════════════════════════════════════
 
-stages:
-  - lint
-  - build
-  - test
-  - scan
-  - deploy
-
-# -----------------------------------------------------------
-# Regles reutilisables
-# -----------------------------------------------------------
-.rules:feature:
+# ─────────────────────────────────────────
+# Workflow — évite les pipelines dupliqués
+# ─────────────────────────────────────────
+workflow:
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
     - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
-.rules:develop:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-
-.rules:main:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-# -----------------------------------------------------------
-# Includes — un fichier CI par service
-# -----------------------------------------------------------
+# ─────────────────────────────────────────
+# Inclusion des pipelines par service
+# ─────────────────────────────────────────
 include:
   - local: '.gitlab/ci/frontend.yml'
   - local: '.gitlab/ci/auth-service.yml'
   - local: '.gitlab/ci/order-service.yml'
   - local: '.gitlab/ci/book-service.yml'
+
+# ─────────────────────────────────────────
+# Ordre des stages (global)
+# ─────────────────────────────────────────
+stages:
+  - lint      # Vérification du style et de la syntaxe
+  - build     # Compilation et packaging
+  - test      # Tests automatisés (séances suivantes)
+  - scan      # Sécurité et qualité (séances suivantes)
+  - deploy    # Déploiement (séances suivantes)
+
+# ─────────────────────────────────────────
+# Règles globales réutilisables par branche
+# ─────────────────────────────────────────
+
+# S'exécute sur toutes les branches actives
+.rules:all:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# S'exécute uniquement sur develop et main (branches de déploiement)
+.rules:deploy-branches:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# S'exécute uniquement sur develop (env DEV)
+.rules:develop:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# S'exécute uniquement sur main (env PROD)
+.rules:main:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# ─────────────────────────────────────────
+# Job de vérification de la structure
+# (s'exécute sur toutes les branches)
+# ─────────────────────────────────────────
+verify:structure:
+  stage: lint
+  image: alpine:3.19
+  script:
+    - echo "=== Environnement $APP_ENV ==="
+    - echo "=== Verification de la structure du mono-repo ==="
+    - test -d frontend && echo "OK frontend/" || { echo "MANQUANT frontend/"; exit 1; }
+    - test -f frontend/Dockerfile && echo "OK frontend/Dockerfile" || { echo "MANQUANT frontend/Dockerfile"; exit 1; }
+    - test -d auth-service && echo "OK auth-service/" || { echo "MANQUANT auth-service/"; exit 1; }
+    - test -f auth-service/Dockerfile && echo "OK auth-service/Dockerfile" || { echo "MANQUANT auth-service/Dockerfile"; exit 1; }
+    - test -d order-service && echo "OK order-service/" || { echo "MANQUANT order-service/"; exit 1; }
+    - test -f order-service/Dockerfile && echo "OK order-service/Dockerfile" || { echo "MANQUANT order-service/Dockerfile"; exit 1; }
+    - test -d book-service && echo "OK book-service/" || { echo "MANQUANT book-service/"; exit 1; }
+    - test -f book-service/Dockerfile && echo "OK book-service/Dockerfile" || { echo "MANQUANT book-service/Dockerfile"; exit 1; }
+    - echo "=== Structure OK ==="
