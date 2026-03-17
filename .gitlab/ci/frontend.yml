@@ -1,50 +1,71 @@
-# =============================================================
-# Pipeline CI — frontend (Next.js)
-# =============================================================
+# ─────────────────────────────────────────────────────────
+# Pipeline Frontend (Next.js)
+# ─────────────────────────────────────────────────────────
 
-frontend:lint:
-  stage: lint
-  image: node:22-alpine
+# Règles : s'exécute uniquement si des fichiers frontend ont changé
+.frontend:rules:
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-      changes: [frontend/**/*]
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-      changes: [frontend/**/*]
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [frontend/**/*]
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [frontend/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - changes:
+        - frontend/**/*
+        - .gitlab/ci/frontend.yml
+        - .gitlab-ci.yml
+
+lint:frontend:
+  stage: lint
+  image: node:20-alpine
+  extends: .frontend:rules
   cache:
-    key: frontend-${CI_COMMIT_REF_SLUG}
+    key: "frontend-deps-$CI_COMMIT_REF_SLUG"
     paths:
       - frontend/node_modules/
-      - frontend/.npm/
   script:
+    - echo "=== Lint Frontend ==="
     - cd frontend
-    - npm ci --cache .npm --prefer-offline
+    - npm ci
     - npm run lint
 
-frontend:build:
-  stage: build
-  image: node:22-alpine
+notify:frontend:
+  stage: lint
+  image: alpine:3.19
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
-      changes: [frontend/**/*]
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  needs:
-    - job: frontend:lint
-      optional: true
+      changes:
+        - frontend/**/*
+        - .gitlab/ci/frontend.yml
+        - .gitlab-ci.yml
+  script:
+    - 'echo "Frontend modifie sur develop -- build et deploiement DEV a venir"'
+    - 'echo "Branche  : $CI_COMMIT_BRANCH"'
+    - 'echo "Commit   : $CI_COMMIT_SHORT_SHA"'
+    - 'echo "Message  : $CI_COMMIT_TITLE"'
+    - 'echo "Pipeline : $CI_PIPELINE_URL"'
+
+build:frontend:
+  stage: build
+  image: node:20-alpine
+  extends: .frontend:rules
   cache:
-    key: frontend-${CI_COMMIT_REF_SLUG}
+    key: "frontend-deps-$CI_COMMIT_REF_SLUG"
     paths:
       - frontend/node_modules/
-      - frontend/.npm/
   script:
+    - echo "=== Build Frontend ==="
     - cd frontend
-    - npm ci --cache .npm --prefer-offline
+    - npm ci
     - npm run build
   artifacts:
     paths:
       - frontend/.next/
     expire_in: 1 hour
+
+verify:build:frontend:
+  stage: build
+  image: alpine:3.19
+  extends: .frontend:rules
+  needs:
+    - job: build:frontend
+      artifacts: true
+  script:
+    - echo "=== Verification du build Frontend ==="
+    - test -d frontend/.next && echo "OK frontend/.next/ existe" || { echo "ERREUR frontend/.next/ manquant"; exit 1; }
+    - 'echo "Taille : $(du -sh frontend/.next | cut -f1)"'
