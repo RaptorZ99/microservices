@@ -15,7 +15,7 @@ export default function Nav() {
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="flex items-center gap-4 py-4">
-          <p className="font-semibold text-gray-800 text-lg flex-1">BookInsights</p>
+          <p className="font-semibold text-gray-800 text-lg flex-1">I Want it</p>
           <div className="flex gap-2">
             {links.map((link) => {
               const active = pathname?.startsWith(link.href)

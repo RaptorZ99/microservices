@@ -1,6 +1,6 @@
-# Plateforme microservices — Auth / Orders / Books / Gateway Next.js
+# I Want it — Plateforme microservices
 
-Quatre services containerisés illustrant un parcours d’authentification et des appels inter-microservices via une façade Next.js.
+Quatre services containerisés illustrant un parcours d'authentification et des appels inter-microservices via une façade Next.js.
 
 ```
 Utilisateur → Next.js (cookies httpOnly) → Auth Service
@@ -10,38 +10,46 @@ Utilisateur → Next.js (cookies httpOnly) → Auth Service
 
 ## Architecture et responsabilités
 
-| Service        | Stack                    | Port | Stockage    | Rôle principal |
-|----------------|--------------------------|------|-------------|----------------|
-| frontend       | Next.js 16 (App Router)  | 3000 | stateless   | UI + passerelle `/api/*` |
-| auth-service   | FastAPI + SQLModel       | 8000 | SQLite      | Register / Login / Refresh (JWT HS256) |
-| order-service  | NestJS + Prisma          | 4000 | SQLite      | CRUD des commandes authentifiées |
-| book-service   | NestJS + Prisma          | 9000 | SQLite      | Recherche OpenLibrary + bibliothèque utilisateur |
+| Service        | Stack                              | Port | Stockage    | Rôle principal |
+|----------------|------------------------------------|------|-------------|----------------|
+| frontend       | Next.js 16 (App Router)            | 3000 | stateless   | UI + passerelle `/api/*` |
+| auth-service   | FastAPI + SQLModel                 | 8000 | SQLite      | Register / Login / Refresh (JWT HS256) |
+| order-service  | NestJS + Prisma 7 + better-sqlite3 | 4000 | SQLite      | CRUD des commandes authentifiées |
+| book-service   | NestJS + Prisma 7 + better-sqlite3 | 9000 | SQLite      | Recherche OpenLibrary + bibliothèque utilisateur |
 
 - Tous les services exposent `/health` (liveness/readiness en Kubernetes).
 - Le secret `JWT_SECRET` est partagé : signature et vérification HS256 alignées entre les trois backends et la gateway.
-- Les Dockerfile sont multi-étapes (build → runtime léger) et les manifestes Kubernetes montent des PVC pour conserver les bases SQLite.
+- Les Dockerfile sont multi-étapes (build → runtime léger) avec `.dockerignore` pour éviter de copier les `node_modules` locaux.
+- Les manifestes Kubernetes montent des PVC sur `/app/data` (NestJS) et `/app/db` (auth) pour persister les bases SQLite sans écraser le schema Prisma.
 
 ## Fonctionnement applicatif
 
-- **Authentification** : `POST /auth/login` (JSON `username` / `password`) génère `access_token` (1 h) et `refresh_token` (30 j). Un compte `admin`/`admin` est créé automatiquement au démarrage via `init_db.py` si absent.
-- **Gateway Next.js** : route `/api/auth-login` appelle l’Auth Service puis écrit `access_token` et `refresh_token` en cookies httpOnly. Les routes `/api/orders*` et `/api/books*` relaient ensuite le JWT dans `Authorization: Bearer ...`.
-- **Order Service** : routes protégées par `JwtAuthGuard` (Nest). Endpoints `/orders` (GET/POST), `/orders/:id` (GET/DELETE) filtrés par l’utilisateur issu du JWT (`sub`).
-- **Book Service** : mêmes protections JWT. Endpoints `/books/search?q=&scope=title|author`, `/books/library` (GET/POST), `/books/library/:workId` (DELETE), `/books/details/:workId`. Les données livres sont récupérées sur l’API publique OpenLibrary (User-Agent configurable) et seules les références (workId) sont stockées.
-- **Refresh** : `POST /auth/refresh` attend un JSON `{"refresh_token": "..."}` et renvoie un nouvel access token ; le frontend expose `/api/refresh` pour automatiser l’appel côté serveur.
+- **Authentification** : `POST /auth/login` (JSON `username` / `password`) génère `access_token` (1 h) et `refresh_token` (30 j). Un compte `admin`/`admin` est créé automatiquement au démarrage si absent.
+- **Gateway Next.js** : route `/api/auth-login` appelle l'Auth Service puis écrit `access_token` et `refresh_token` en cookies httpOnly. Les routes `/api/orders*` et `/api/books*` relaient ensuite le JWT dans `Authorization: Bearer ...`.
+- **Middleware** : les routes `/order` et `/book` sont protégées par un middleware Next.js qui vérifie la présence du cookie `access_token` et redirige vers `/` si absent.
+- **Order Service** : routes protégées par `JwtAuthGuard` (Nest). Endpoints `/orders` (GET/POST), `/orders/:id` (GET/DELETE) filtrés par l'utilisateur issu du JWT (`sub`).
+- **Book Service** : mêmes protections JWT. Endpoints `/books/search?q=&scope=title|author`, `/books/library` (GET/POST), `/books/library/:workId` (DELETE), `/books/details/:workId`. Les données livres sont récupérées sur l'API publique OpenLibrary et seules les références (workId) sont stockées.
+- **Refresh** : `POST /auth/refresh` attend un JSON `{"refresh_token": "..."}` et renvoie un nouvel access token ; le frontend expose `/api/refresh` pour automatiser l'appel côté serveur.
 
 ## Structure du dépôt
-- `auth-service/` : FastAPI + SQLModel + bcrypt + JWT (HS256). Admin seedé (`admin`/`admin`).
-- `order-service/` : NestJS + Prisma + SQLite, DTO validés (class-validator), guard JWT maison.
-- `book-service/` : NestJS + Prisma + SQLite, client OpenLibrary, cache d’auteurs en mémoire.
-- `frontend/` : Next.js 16 (App Router), API Routes de proxy, UI dashboard (Commandes & Bibliothèque).
-- `k8s/` : namespace, deployments, services, PVC, ingress Minikube.
-- `docker-compose.yml` : orchestration locale des quatre conteneurs.
 
-## Variables d’environnement (Docker Compose)
-Les fichiers `.env` sont déjà fournis dans chaque dossier et référencés par `docker-compose.yml`. Points importants :
+```
+auth-service/        FastAPI + SQLModel + bcrypt + JWT (HS256)
+order-service/       NestJS + Prisma 7 + better-sqlite3, DTO validés, guard JWT
+book-service/        NestJS + Prisma 7 + better-sqlite3, client OpenLibrary
+frontend/            Next.js 16 (App Router), API Routes de proxy, UI (Commandes & Livres)
+  app/(protected)/   Route group — layout partagé entre /order et /book
+  middleware.ts      Protection des routes authentifiées
+k8s/                 namespace, deployments, services, PVC, ingress Minikube
+docker-compose.yml   Orchestration locale des quatre conteneurs
+```
+
+## Variables d'environnement (Docker Compose)
+
+Les fichiers `.env` sont fournis dans chaque dossier et référencés par `docker-compose.yml`. Points importants :
 - `JWT_SECRET` doit être identique dans `auth-service`, `order-service`, `book-service` et la gateway.
-- Le chemin par défaut de l’Auth Service pointe déjà sur le volume (`DATABASE_URL=sqlite:////app/db/auth.db`) monté par `auth_db_data`.
-- OpenLibrary : `OPENLIBRARY_USER_AGENT` et `BOOK_SEARCH_LIMIT` pilotent l’appel externe.
+- Les services NestJS utilisent un driver adapter (`@prisma/adapter-better-sqlite3`) — la `DATABASE_URL` pointe vers `/app/data/dev.db` (volume Docker séparé du dossier `prisma/`).
+- OpenLibrary : `OPENLIBRARY_USER_AGENT` et `BOOK_SEARCH_LIMIT` pilotent l'appel externe.
 
 Exemple de configuration (valeurs par défaut fournies) :
 
@@ -58,14 +66,14 @@ CORS_ORIGINS=http://localhost:3000
 `order-service/.env`
 ```conf
 PORT=4000
-DATABASE_URL=file:/app/prisma/dev.db
+DATABASE_URL=file:/app/data/dev.db
 JWT_SECRET=change-me
 ```
 
 `book-service/.env`
 ```conf
 PORT=9000
-DATABASE_URL=file:/app/prisma/dev.db
+DATABASE_URL=file:/app/data/dev.db
 JWT_SECRET=change-me
 OPENLIBRARY_USER_AGENT=BookInsights/1.0 (contact@example.com)
 BOOK_SEARCH_LIMIT=12
@@ -80,65 +88,68 @@ NEXT_PUBLIC_API_BASE=http://localhost:3000/api
 ```
 
 ## Lancement local (Docker Compose)
+
 Prérequis : Docker + Docker Compose.
 
-1) Vérifier les `.env` (secret partagé) puis construire les images :  
+1) Construire les images :
 `docker compose build`
 
-2) Démarrer :  
+2) Démarrer :
 `docker compose up -d`
 
-3) Contrôles de santé :  
-`curl http://localhost:8000/health`  
-`curl http://localhost:4000/health`  
-`curl http://localhost:9000/health`  
+3) Contrôles de santé :
+`curl http://localhost:8000/health`
+`curl http://localhost:4000/health`
+`curl http://localhost:9000/health`
 `curl http://localhost:3000/api/health`
 
-4) Premier login (compte seedé) :  
+4) Premier login (compte seedé) :
 `curl -X POST http://localhost:8000/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}'`
 
-5) Parcours applicatif : `http://localhost:3000` → login → `/dashboard/order` pour gérer les commandes, `/dashboard/book` pour chercher des ouvrages OpenLibrary, les ajouter à la bibliothèque et consulter les détails.
+5) Parcours applicatif : `http://localhost:3000` → login → `/order` pour gérer les commandes, `/book` pour chercher des ouvrages OpenLibrary, les ajouter à la bibliothèque et consulter les détails.
 
-6) Logs :  
+6) Logs :
 `docker compose logs -f frontend auth-service order-service book-service`
 
-7) Arrêt :  
-`docker compose down` (ajouter `-v` pour supprimer les volumes SQLite et repartir d’un état vierge).
+7) Arrêt :
+`docker compose down` (ajouter `-v` pour supprimer les volumes SQLite et repartir d'un état vierge).
 
-Volumes utilisés : `auth_db_data` (`/app/db/auth.db`), `order_db_data` (`/app/prisma/dev.db`), `book_db_data` (`/app/prisma/dev.db`).
+Volumes utilisés : `auth_db_data` (`/app/db`), `order_db_data` (`/app/data`), `book_db_data` (`/app/data`).
 
 ## API de référence
-- **Auth Service (FastAPI)** :  
-  - `POST /auth/register` (`username`, `password`)  
-  - `POST /auth/login` (`username`, `password`)  
-  - `POST /auth/refresh` (`refresh_token` en JSON)  
-  - `GET /.well-known/jwks.json` (JWKS fictif pour HS256)  
+
+- **Auth Service (FastAPI)** :
+  - `POST /auth/register` (`username`, `password`)
+  - `POST /auth/login` (`username`, `password`)
+  - `POST /auth/refresh` (`refresh_token` en JSON)
+  - `GET /.well-known/jwks.json`
   - `GET /health`
-- **Order Service (NestJS)** :  
-  - `GET /orders` — liste des commandes de l’utilisateur courant  
-  - `POST /orders` — création `{ item }`  
-  - `GET /orders/:id` — détail si propriétaire  
-  - `DELETE /orders/:id` — suppression si propriétaire  
+- **Order Service (NestJS)** :
+  - `GET /orders` — liste des commandes de l'utilisateur courant
+  - `POST /orders` — création `{ item }`
+  - `GET /orders/:id` — détail si propriétaire
+  - `DELETE /orders/:id` — suppression si propriétaire
   - `GET /health`
-- **Book Service (NestJS)** :  
-  - `GET /books/search?q=...&scope=title|author`  
-  - `GET /books/library` — bibliothèque utilisateur  
-  - `POST /books/library` — ajoute `{ workId }` (unicité par user/workId)  
-  - `DELETE /books/library/:workId` — retire une entrée  
-  - `GET /books/details/:workId` — fiche enrichie OpenLibrary  
+- **Book Service (NestJS)** :
+  - `GET /books/search?q=...&scope=title|author`
+  - `GET /books/library` — bibliothèque utilisateur
+  - `POST /books/library` — ajoute `{ workId }`
+  - `DELETE /books/library/:workId` — retire une entrée
+  - `GET /books/details/:workId` — fiche enrichie OpenLibrary
   - `GET /health`
-- **Gateway Next.js** :  
-  - `/api/auth-login`, `/api/refresh` (gestion des cookies JWT)  
-  - `/api/orders*`, `/api/books*` (proxy vers les microservices)  
+- **Gateway Next.js** :
+  - `/api/auth-login`, `/api/refresh` (gestion des cookies JWT)
+  - `/api/orders*`, `/api/books*` (proxy vers les microservices)
   - `/api/health`
 
 ## Déploiement Kubernetes (Minikube)
+
 Prérequis : `kubectl`, `minikube`, addon `ingress`.
 
-1) D démarrer le cluster :  
+1) Démarrer le cluster :
 `minikube start --driver=docker`
 
-2) Déployer le namespace puis les ressources :  
+2) Déployer le namespace puis les ressources :
 ```bash
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/auth -n microservices
@@ -148,25 +159,22 @@ kubectl apply -f k8s/frontend -n microservices
 kubectl apply -f k8s/ingress -n microservices
 ```
 
-3) Activer et exposer l’ingress :  
+3) Activer et exposer l'ingress :
 ```bash
 minikube addons enable ingress
 minikube tunnel            # laisser ouvert
 echo "127.0.0.1 devops.local" | sudo tee -a /etc/hosts
 ```
 
-4) Vérifications rapides :  
-`kubectl get pods,svc,ingress -n microservices`  
-`kubectl logs deploy/auth-service -n microservices` (ou autres deployments)
+4) Vérifications rapides :
+`kubectl get pods,svc,ingress -n microservices`
 
-5) Accès utilisateur : `http://devops.local` (service `frontend` exposé par l’Ingress).
+5) Accès utilisateur : `http://devops.local` → login → `/order` et `/book`.
 
-6) Nettoyage complet :  
-`kubectl delete ns microservices` (supprime deployments, services et PVC SQLite).
+6) Nettoyage complet :
+`kubectl delete ns microservices`
 
-## Supervision et tests
+## Tests
+
+- Les services NestJS incluent des suites Jest : `npm test` dans `book-service/` ou `order-service/`.
 - Probes `/health` sur chaque service + `/api/health` côté gateway.
-- Les services NestJS incluent des suites Jest (`npm test` dans `book-service/` ou `order-service/`).  
-- Le service FastAPI peut être lancé hors conteneur via `uvicorn main:app --reload --port 8000` pour des tests manuels.
-
-Ce README documente le fonctionnement end-to-end (authentification, proxy Next.js, commandes, bibliothèque OpenLibrary) ainsi que les procédures de lancement Docker Compose et Minikube/Kubernetes attendues pour l’évaluation.
