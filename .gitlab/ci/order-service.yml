@@ -1,6 +1,5 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/order-service.yml
-# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .order:rules:
@@ -11,7 +10,7 @@
         - .gitlab-ci.yml
 
 lint:order-service:
-  stage: lint
+  stage: verify
   image: node:20-alpine
   extends: .order:rules
   cache:
@@ -29,48 +28,27 @@ lint:order-service:
 
 build:order-service:
   stage: build
-  extends:
-    - .job:build-push
-  needs:
-    - job: lint:order-service
-      artifacts: false
-      optional: true
+  extends: .job:build
   variables:
     SERVICE_NAME: "order-service"
     SERVICE_PATH: "./order-service"
 
 sign:order-service:
   extends: .job:sign
-  needs:
-    - job: build:order-service
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "order-service"
 
 sbom:order-service:
   extends: .job:sbom
-  needs:
-    - job: build:order-service
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "order-service"
 
 grype:order-service:
   extends: .job:grype
-  needs:
-    - job: sbom:order-service
-      artifacts: true
-      optional: true
   variables:
     SERVICE_NAME: "order-service"
 
 check:order-service:
   extends: .job:check
-  needs:
-    - job: sign:order-service
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "order-service"
