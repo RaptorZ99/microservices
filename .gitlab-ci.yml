@@ -36,7 +36,8 @@ stages:
   - lint      # Vérification du style et de la syntaxe
   - build     # Compilation et packaging
   - test      # Tests automatisés (séances suivantes)
-  - scan      # Sécurité et qualité (séances suivantes)
+  - scan      # SBOM + Grype (vulnérabilités)
+  - sign      # Signature Cosign (main uniquement)
   - deploy    # Déploiement (séances suivantes)
 
 # ─────────────────────────────────────────

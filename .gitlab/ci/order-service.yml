@@ -56,7 +56,7 @@ grype:order-service:
 sign:order-service:
   extends: .job:sign
   needs:
-    - job: build:order-service
+    - job: grype:order-service
       artifacts: false
   variables:
     SERVICE_NAME: "order-service"
