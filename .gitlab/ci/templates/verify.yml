@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────────────────────────
+# .gitlab/ci/templates/verify.yml
+#
+# Stage : verify
+# Job global de vérification de la structure du mono-repo.
+# Les lints par service restent dans leurs fichiers respectifs
+# (logique différente par service : eslint, flake8, prisma).
+# ─────────────────────────────────────────────────────────────────
+
+verify:structure:
+  stage: verify
+  image: alpine:3.19
+  script:
+    - echo "=== Environnement $APP_ENV ==="
+    - echo "=== Verification de la structure du mono-repo ==="
+    - test -d frontend && echo "OK frontend/" || { echo "MANQUANT frontend/"; exit 1; }
+    - test -f frontend/Dockerfile && echo "OK frontend/Dockerfile" || { echo "MANQUANT frontend/Dockerfile"; exit 1; }
+    - test -d auth-service && echo "OK auth-service/" || { echo "MANQUANT auth-service/"; exit 1; }
+    - test -f auth-service/Dockerfile && echo "OK auth-service/Dockerfile" || { echo "MANQUANT auth-service/Dockerfile"; exit 1; }
+    - test -d order-service && echo "OK order-service/" || { echo "MANQUANT order-service/"; exit 1; }
+    - test -f order-service/Dockerfile && echo "OK order-service/Dockerfile" || { echo "MANQUANT order-service/Dockerfile"; exit 1; }
+    - test -d book-service && echo "OK book-service/" || { echo "MANQUANT book-service/"; exit 1; }
+    - test -f book-service/Dockerfile && echo "OK book-service/Dockerfile" || { echo "MANQUANT book-service/Dockerfile"; exit 1; }
+    - echo "=== Structure OK ==="
