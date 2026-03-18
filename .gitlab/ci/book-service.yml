@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────
-# Pipeline Book Service (NestJS)
+# .gitlab/ci/book-service.yml
 # ─────────────────────────────────────────────────────────
 
 .book:rules:
@@ -28,21 +28,35 @@ lint:book-service:
 
 build:book-service:
   stage: build
-  image: node:20-alpine
-  extends: .book:rules
-  cache:
-    key: "book-deps-$CI_COMMIT_REF_SLUG"
-    paths:
-      - book-service/node_modules/
+  extends:
+    - .job:build-push
+  needs:
+    - job: lint:book-service
+      artifacts: false
   variables:
-    DATABASE_URL: "file:/tmp/dev.db"
-  script:
-    - echo "=== Build Book Service ==="
-    - cd book-service
-    - npm ci
-    - npx prisma generate
-    - npm run build
-  artifacts:
-    paths:
-      - book-service/dist/
-    expire_in: 1 hour
+    SERVICE_NAME: "book-service"
+    SERVICE_PATH: "./book-service"
+
+sbom:book-service:
+  extends: .job:sbom
+  needs:
+    - job: build:book-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "book-service"
+
+grype:book-service:
+  extends: .job:grype
+  needs:
+    - job: sbom:book-service
+      artifacts: true
+  variables:
+    SERVICE_NAME: "book-service"
+
+sign:book-service:
+  extends: .job:sign
+  needs:
+    - job: build:book-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "book-service"

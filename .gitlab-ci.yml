@@ -21,6 +21,8 @@ workflow:
 # Inclusion des pipelines par service
 # ─────────────────────────────────────────
 include:
+  - local: '.gitlab/ci/templates/build-push.yml'
+  - local: '.gitlab/ci/templates/scan.yml'
   - local: '.gitlab/ci/frontend.yml'
   - local: '.gitlab/ci/auth-service.yml'
   - local: '.gitlab/ci/order-service.yml'
@@ -30,6 +32,7 @@ include:
 # Ordre des stages (global)
 # ─────────────────────────────────────────
 stages:
+  - verify    # Vérification de la structure du mono-repo
   - lint      # Vérification du style et de la syntaxe
   - build     # Compilation et packaging
   - test      # Tests automatisés (séances suivantes)
@@ -70,7 +73,7 @@ stages:
 # (s'exécute sur toutes les branches)
 # ─────────────────────────────────────────
 verify:structure:
-  stage: lint
+  stage: verify
   image: alpine:3.19
   script:
     - echo "=== Environnement $APP_ENV ==="

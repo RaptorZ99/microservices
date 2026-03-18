@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────
-# Pipeline Order Service (NestJS)
+# .gitlab/ci/order-service.yml
 # ─────────────────────────────────────────────────────────
 
 .order:rules:
@@ -28,21 +28,35 @@ lint:order-service:
 
 build:order-service:
   stage: build
-  image: node:20-alpine
-  extends: .order:rules
-  cache:
-    key: "order-deps-$CI_COMMIT_REF_SLUG"
-    paths:
-      - order-service/node_modules/
+  extends:
+    - .job:build-push
+  needs:
+    - job: lint:order-service
+      artifacts: false
   variables:
-    DATABASE_URL: "file:/tmp/dev.db"
-  script:
-    - echo "=== Build Order Service ==="
-    - cd order-service
-    - npm ci
-    - npx prisma generate
-    - npm run build
-  artifacts:
-    paths:
-      - order-service/dist/
-    expire_in: 1 hour
+    SERVICE_NAME: "order-service"
+    SERVICE_PATH: "./order-service"
+
+sbom:order-service:
+  extends: .job:sbom
+  needs:
+    - job: build:order-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "order-service"
+
+grype:order-service:
+  extends: .job:grype
+  needs:
+    - job: sbom:order-service
+      artifacts: true
+  variables:
+    SERVICE_NAME: "order-service"
+
+sign:order-service:
+  extends: .job:sign
+  needs:
+    - job: build:order-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "order-service"
