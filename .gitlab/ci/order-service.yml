@@ -1,5 +1,6 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/order-service.yml
+# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .order:rules:
@@ -38,6 +39,15 @@ build:order-service:
     SERVICE_NAME: "order-service"
     SERVICE_PATH: "./order-service"
 
+sign:order-service:
+  extends: .job:sign
+  needs:
+    - job: build:order-service
+      artifacts: false
+      optional: true
+  variables:
+    SERVICE_NAME: "order-service"
+
 sbom:order-service:
   extends: .job:sbom
   needs:
@@ -56,10 +66,10 @@ grype:order-service:
   variables:
     SERVICE_NAME: "order-service"
 
-sign:order-service:
-  extends: .job:sign
+check:order-service:
+  extends: .job:check
   needs:
-    - job: grype:order-service
+    - job: sign:order-service
       artifacts: false
       optional: true
   variables:

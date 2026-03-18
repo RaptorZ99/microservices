@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────────────
+# .gitlab/ci/templates/sign.yml
+#
+# Template : signature cryptographique d'image via Cosign
+# Stage : sign (main uniquement)
+#
+# Usage :
+#   extends: .job:sign
+#   variables:
+#     SERVICE_NAME: "frontend"
+# ─────────────────────────────────────────────────────────────────
+
+.job:sign:
+  stage: sign
+  image: alpine:3.19
+  before_script:
+    - apk add --no-cache curl jq
+    - curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
+    - chmod +x /usr/local/bin/cosign
+    - curl https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)' > /tmp/signing-config.json
+  script:
+    - IMAGE_GITLAB="$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA"
+    - echo "=== Signature de $IMAGE_GITLAB ==="
+    - echo "$CI_REGISTRY_PASSWORD" | cosign login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
+    - cosign sign --key "$COSIGN_PRIVATE_KEY" --signing-config /tmp/signing-config.json "$IMAGE_GITLAB"
+    - echo "Image signee"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
