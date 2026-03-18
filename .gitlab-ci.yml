@@ -32,6 +32,7 @@ include:
 # Ordre des stages (global)
 # ─────────────────────────────────────────
 stages:
+  - verify    # Vérification de la structure du mono-repo
   - lint      # Vérification du style et de la syntaxe
   - build     # Compilation et packaging
   - test      # Tests automatisés (séances suivantes)
@@ -72,7 +73,7 @@ stages:
 # (s'exécute sur toutes les branches)
 # ─────────────────────────────────────────
 verify:structure:
-  stage: lint
+  stage: verify
   image: alpine:3.19
   script:
     - echo "=== Environnement $APP_ENV ==="
