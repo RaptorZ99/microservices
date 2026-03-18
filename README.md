@@ -188,60 +188,25 @@ echo "127.0.0.1 devops.local" | sudo tee -a /etc/hosts
 
 **Repo** : https://gitlab.com/loulou.scarfone/microservices
 
-Pipeline GitLab CI/CD mono-repo avec jobs conditionnels par service, images Docker production-ready, et sécurité supply chain.
+Le projet utilise un pipeline GitLab CI/CD mono-repo avec des jobs conditionnels par service.
 
 ### Workflow Gitflow simplifié
 
 | Branche | Pipeline | Environnement |
 |---------|----------|---------------|
-| `feature/*` / `hotfix/*` | verify + lint | Feedback rapide |
-| `develop` | verify + lint + build + scan (SBOM + Grype) | Staging / Dev |
-| `main` | verify + lint + build + scan (SBOM + Grype) + sign (Cosign) | Production |
+| `feature/*` / `hotfix/*` | lint + tests | Feedback rapide |
+| `develop` | lint + build + tests + notify | Staging / Dev |
+| `main` | lint + build + tests | Production |
 
 - `feature/*` → `develop` via Merge Request
 - `develop` → `main` via MR + validation manuelle
 - Push direct interdit sur `main` et `develop` (branches protégées)
-- `workflow:` avec `$CI_OPEN_MERGE_REQUESTS` empêche les pipelines dupliqués (push + MR)
-
-### Stages et DAG par service
-
-```
-verify:structure          (global, toujours)
-       ↓
-  lint:SERVICE             (si fichiers du service modifiés)
-       ↓
-  build:SERVICE            (develop/main — Docker build + push GitLab Registry)
-       ↓
-  sbom:SERVICE             (develop/main — inventaire SBOM via Syft, format CycloneDX)
-       ↓
-  grype:SERVICE            (develop/main — scan de vulnérabilités depuis le SBOM)
-       ↓
-  sign:SERVICE             (main uniquement — signature Cosign de l'image)
-```
-
-Chaque service a sa propre chaîne DAG indépendante. Si le lint d'un service échoue, seul son build/scan est bloqué — les autres services continuent.
 
 ### Jobs conditionnels
 
-Chaque service a ses propres `rules: changes` — seuls les jobs du service modifié s'exécutent. Les builds utilisent `$SERVICE_NAME` dans les rules `changes` du template, expansé depuis les `variables:` du job enfant.
+Chaque service a ses propres `rules: changes` — seuls les jobs du service modifié s'exécutent. Un changement dans `frontend/` ne déclenche pas les jobs `auth-service`, `order-service` ou `book-service`.
 
-### Templates réutilisables
-
-| Template | Fichier | Rôle |
-|----------|---------|------|
-| `.job:build-push` | `.gitlab/ci/templates/build-push.yml` | Build Docker + push GitLab Registry (tags SHA, branche, semver, latest) |
-| `.job:sbom` | `.gitlab/ci/templates/scan.yml` | Génération SBOM CycloneDX via Syft |
-| `.job:grype` | `.gitlab/ci/templates/scan.yml` | Scan de vulnérabilités via Grype |
-| `.job:sign` | `.gitlab/ci/templates/scan.yml` | Signature d'image via Cosign |
-
-### Dockerfiles production-ready
-
-Tous les services utilisent des Dockerfiles multi-stage :
-- Images de base Alpine / slim (réduction ~70-80% de la taille)
-- Séparation build / runtime (pas de devDependencies en prod)
-- Utilisateur non-root (`appuser`)
-- Labels OCI (titre, description, commit, date, source)
-- `.dockerignore` complets
+Un bloc `workflow:` avec `$CI_OPEN_MERGE_REQUESTS` empêche la création de pipelines dupliqués (push + MR) quand une Merge Request est ouverte.
 
 ### Linters par service
 
@@ -251,17 +216,6 @@ Tous les services utilisent des Dockerfiles multi-stage :
 | auth-service | flake8 (`--max-line-length=120 --exclude=.venv`) |
 | order-service | ESLint + Prisma generate |
 | book-service | ESLint + Prisma generate |
-
-### Variables CI/CD
-
-| Variable | Type | Usage |
-|----------|------|-------|
-| `APP_ENV` | Variable | Environnement CI |
-| `COSIGN_PRIVATE_KEY` | File | Clé privée pour signature d'images |
-| `COSIGN_PUBLIC_KEY` | Variable | Clé publique pour vérification |
-| `COSIGN_PASSWORD` | Variable (masked) | Passphrase Cosign |
-| `DOCKERHUB_USERNAME` | Variable | Identifiant Docker Hub (optionnel) |
-| `DOCKERHUB_TOKEN` | Variable (masked) | Token Docker Hub (optionnel) |
 
 ## Tests
 
