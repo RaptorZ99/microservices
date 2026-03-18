@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────
-# Pipeline Book Service (NestJS)
+# .gitlab/ci/book-service.yml
 # ─────────────────────────────────────────────────────────
 
 .book:rules:
@@ -26,23 +26,13 @@ lint:book-service:
     - npx prisma generate
     - npm run lint
 
+# ── Build Docker + push multi-registry ───────────────────
 build:book-service:
   stage: build
-  image: node:20-alpine
-  extends: .book:rules
-  cache:
-    key: "book-deps-$CI_COMMIT_REF_SLUG"
-    paths:
-      - book-service/node_modules/
+  extends:
+    - .job:build-push
   variables:
-    DATABASE_URL: "file:/tmp/dev.db"
-  script:
-    - echo "=== Build Book Service ==="
-    - cd book-service
-    - npm ci
-    - npx prisma generate
-    - npm run build
-  artifacts:
-    paths:
-      - book-service/dist/
-    expire_in: 1 hour
+    SERVICE_NAME: "book-service"
+    SERVICE_PATH: "./book-service"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
