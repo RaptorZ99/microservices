@@ -30,6 +30,7 @@ build:frontend:
   needs:
     - job: lint:frontend
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "frontend"
     SERVICE_PATH: "./frontend"
@@ -39,6 +40,7 @@ sbom:frontend:
   needs:
     - job: build:frontend
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "frontend"
 
@@ -47,6 +49,7 @@ grype:frontend:
   needs:
     - job: sbom:frontend
       artifacts: true
+      optional: true
   variables:
     SERVICE_NAME: "frontend"
 
@@ -55,5 +58,6 @@ sign:frontend:
   needs:
     - job: grype:frontend
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "frontend"

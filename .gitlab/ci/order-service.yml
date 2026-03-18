@@ -33,6 +33,7 @@ build:order-service:
   needs:
     - job: lint:order-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "order-service"
     SERVICE_PATH: "./order-service"
@@ -42,6 +43,7 @@ sbom:order-service:
   needs:
     - job: build:order-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "order-service"
 
@@ -50,6 +52,7 @@ grype:order-service:
   needs:
     - job: sbom:order-service
       artifacts: true
+      optional: true
   variables:
     SERVICE_NAME: "order-service"
 
@@ -58,5 +61,6 @@ sign:order-service:
   needs:
     - job: grype:order-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "order-service"
