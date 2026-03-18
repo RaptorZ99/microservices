@@ -35,13 +35,11 @@ build:order-service:
 
 sign:order-service:
   extends: .job:sign
-  dependencies: []
   variables:
     SERVICE_NAME: "order-service"
 
 sbom:order-service:
   extends: .job:sbom
-  dependencies: []
   variables:
     SERVICE_NAME: "order-service"
 

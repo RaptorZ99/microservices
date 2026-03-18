@@ -35,13 +35,11 @@ build:auth-service:
 
 sign:auth-service:
   extends: .job:sign
-  dependencies: []
   variables:
     SERVICE_NAME: "auth-service"
 
 sbom:auth-service:
   extends: .job:sbom
-  dependencies: []
   variables:
     SERVICE_NAME: "auth-service"
 
