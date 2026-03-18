@@ -26,7 +26,6 @@ lint:book-service:
     - npx prisma generate
     - npm run lint
 
-# ── Build Docker + push multi-registry ───────────────────
 build:book-service:
   stage: build
   extends:
@@ -34,5 +33,24 @@ build:book-service:
   variables:
     SERVICE_NAME: "book-service"
     SERVICE_PATH: "./book-service"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
+
+sbom:book-service:
+  extends: .job:sbom
+  variables:
+    SERVICE_NAME: "book-service"
+
+grype:book-service:
+  extends: .job:grype
+  needs:
+    - job: sbom:book-service
+      artifacts: true
+  variables:
+    SERVICE_NAME: "book-service"
+
+sign:book-service:
+  extends: .job:sign
+  needs:
+    - job: build:book-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "book-service"

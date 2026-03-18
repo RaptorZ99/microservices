@@ -112,9 +112,18 @@
       echo " Docker Hub : $IMAGE_DOCKERHUB:$CI_COMMIT_SHORT_SHA"
       echo "==========================================="
 
-  # Ce template ne s'exécute que sur develop, main ou un tag Git
-  # (pas sur les branches feature/*)
+  # S'exécute sur develop/main si les fichiers du service ont changé,
+  # ou toujours sur un tag Git (release).
+  # $SERVICE_NAME est expansé depuis les variables: du job enfant.
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
+      changes:
+        - $SERVICE_NAME/**/*
+        - .gitlab/ci/$SERVICE_NAME.yml
+        - .gitlab-ci.yml
     - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - $SERVICE_NAME/**/*
+        - .gitlab/ci/$SERVICE_NAME.yml
+        - .gitlab-ci.yml
     - if: '$CI_COMMIT_TAG'

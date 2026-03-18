@@ -23,11 +23,6 @@ lint:frontend:
     - npm ci
     - npm run lint
 
-# ── Build Docker + push multi-registry ───────────────────
-# Construit l'image Docker et la pousse vers
-# GitLab Registry et Docker Hub via le template
-# S'exécute uniquement sur develop et main (pas sur feature/*)
-# ─────────────────────────────────────────────────────────
 build:frontend:
   stage: build
   extends:
@@ -35,8 +30,6 @@ build:frontend:
   variables:
     SERVICE_NAME: "frontend"
     SERVICE_PATH: "./frontend"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
 
 notify:frontend:
   stage: lint
@@ -53,3 +46,24 @@ notify:frontend:
     - 'echo "Commit   : $CI_COMMIT_SHORT_SHA"'
     - 'echo "Message  : $CI_COMMIT_TITLE"'
     - 'echo "Pipeline : $CI_PIPELINE_URL"'
+
+sbom:frontend:
+  extends: .job:sbom
+  variables:
+    SERVICE_NAME: "frontend"
+
+grype:frontend:
+  extends: .job:grype
+  needs:
+    - job: sbom:frontend
+      artifacts: true
+  variables:
+    SERVICE_NAME: "frontend"
+
+sign:frontend:
+  extends: .job:sign
+  needs:
+    - job: build:frontend
+      artifacts: false
+  variables:
+    SERVICE_NAME: "frontend"
