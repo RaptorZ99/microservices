@@ -13,6 +13,9 @@ Pour TOUT ce qui touche à Git : commits, branches, merge requests, revues de co
 ### MCP Context7 — TOUJOURS consulter
 Pour TOUTE question sur une librairie ou un framework (Next.js, NestJS, Prisma, FastAPI, Tailwind, React, etc.), tu DOIS d'abord consulter la documentation via `mcp__plugin_context7_context7__resolve-library-id` puis `mcp__plugin_context7_context7__query-docs`. Ne jamais se fier uniquement à tes connaissances internes quand Context7 peut fournir la doc à jour.
 
+### Rules `.claude/rules/` — Cours et référentiels
+Les fichiers dans `.claude/rules/` contiennent les cours du module DevOps (CI/CD, Docker, etc.) synthétisés et structurés. Ils sont chargés automatiquement selon les fichiers touchés (frontmatter `paths:`). TOUJOURS s'y référer quand tu travailles sur un sujet couvert par un cours (pipeline, Dockerfile, registry, etc.) pour respecter les patterns et bonnes pratiques enseignés.
+
 ## Projet
 
 **"I Want it"** — Plateforme microservices avec 4 services conteneurisés, orchestrés via Docker Compose et Kubernetes.
@@ -72,87 +75,11 @@ k8s/
 - PVC pour persister les BDD SQLite (auth, order, book)
 - Minikube avec addon ingress, accès via `devops.local`
 
-## CI/CD — GitLab Pipeline
+## GitLab
 
-### Stratégie de branches (Gitflow simplifié)
+**Repo** : https://gitlab.com/loulou.scarfone/microservices
 
-| Branche | Déploiement | Environnement |
-|---------|-------------|---------------|
-| `main` | Manuel (après validation) | Production |
-| `develop` | Automatique | Staging / Dev |
-| `feature/*` | Non — lint + tests uniquement | Local |
-| `hotfix/*` | Non — lint + tests uniquement | Local |
-
-**Flux :**
-- `feature/*` → `develop` via Merge Request
-- `hotfix/*` → `main` via MR + backport → `develop`
-- `develop` → `main` via MR + validation manuelle
-- Push direct interdit sur `main` et `develop` (branches protégées)
-
-### Nommage des branches
-
-```
-feature/S1-setup-gitlab-pipeline
-feature/auth-refresh-token
-fix/order-service-null-pointer
-hotfix/prod-auth-crash
-```
-
-### Comportement du pipeline par branche
-
-```
-feature/* / hotfix/*  →  lint + tests (feedback rapide)
-develop               →  lint + build + tests + push registry + deploy DEV (auto)
-main                  →  lint + build + tests + push registry + deploy PROD (manuel)
-```
-
-### Organisation mono-repo du pipeline
-
-Le `.gitlab-ci.yml` est le point d'entrée. Chaque service a son propre fichier CI :
-
-```
-.gitlab-ci.yml                    # include + stages
-.gitlab/ci/frontend.yml           # jobs frontend
-.gitlab/ci/auth-service.yml       # jobs auth
-.gitlab/ci/order-service.yml      # jobs order
-.gitlab/ci/book-service.yml       # jobs book
-```
-
-- Utiliser `rules: changes` pour ne déclencher que les jobs du service modifié
-- Utiliser `extends` avec des règles réutilisables (`.rules:feature`, `.rules:develop`, `.rules:main`)
-- Utiliser `needs` pour les dépendances inter-jobs (pipeline DAG)
-- Cache `node_modules/` et `.npm/` avec clé `$CI_COMMIT_REF_SLUG`
-- Artifacts pour transmettre fichiers entre jobs (coverage, builds)
-- Secrets (tokens, mots de passe) uniquement via GitLab CI/CD Variables (Settings → CI/CD → Variables), **jamais en dur dans le YAML**
-
-### Stages
-
-```yaml
-stages:
-  - lint
-  - build
-  - test
-  - scan
-  - deploy
-```
-
-### Règles réutilisables (pattern)
-
-```yaml
-.rules:feature:
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-.rules:develop:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-
-.rules:main:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-```
+Gitflow simplifié : `feature/*` → `develop` → `main` via Merge Requests. Branches `main` et `develop` protégées (push = No one). Pipeline CI mono-repo dans `.gitlab-ci.yml` + `.gitlab/ci/`.
 
 ### Conventional Commits
 

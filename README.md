@@ -42,6 +42,16 @@ frontend/            Next.js 16 (App Router), API Routes de proxy, UI (Commandes
   middleware.ts      Protection des routes authentifiées
 k8s/                 namespace, deployments, services, PVC, ingress Minikube
 docker-compose.yml   Orchestration locale des quatre conteneurs
+.gitlab-ci.yml       Point d'entrée du pipeline CI/CD
+.gitlab/
+  ci/
+    frontend.yml     Pipeline frontend (lint, notify, build, verify:build)
+    auth-service.yml Pipeline auth (lint, build)
+    order-service.yml Pipeline order (lint, build)
+    book-service.yml Pipeline book (lint, build)
+  merge_request_templates/
+    Default.md       Template de Merge Request
+  CODEOWNERS         Responsables par service
 ```
 
 ## Variables d'environnement (Docker Compose)
@@ -173,6 +183,39 @@ echo "127.0.0.1 devops.local" | sudo tee -a /etc/hosts
 
 6) Nettoyage complet :
 `kubectl delete ns microservices`
+
+## CI/CD — GitLab Pipeline
+
+**Repo** : https://gitlab.com/loulou.scarfone/microservices
+
+Le projet utilise un pipeline GitLab CI/CD mono-repo avec des jobs conditionnels par service.
+
+### Workflow Gitflow simplifié
+
+| Branche | Pipeline | Environnement |
+|---------|----------|---------------|
+| `feature/*` / `hotfix/*` | lint + tests | Feedback rapide |
+| `develop` | lint + build + tests + notify | Staging / Dev |
+| `main` | lint + build + tests | Production |
+
+- `feature/*` → `develop` via Merge Request
+- `develop` → `main` via MR + validation manuelle
+- Push direct interdit sur `main` et `develop` (branches protégées)
+
+### Jobs conditionnels
+
+Chaque service a ses propres `rules: changes` — seuls les jobs du service modifié s'exécutent. Un changement dans `frontend/` ne déclenche pas les jobs `auth-service`, `order-service` ou `book-service`.
+
+Un bloc `workflow:` avec `$CI_OPEN_MERGE_REQUESTS` empêche la création de pipelines dupliqués (push + MR) quand une Merge Request est ouverte.
+
+### Linters par service
+
+| Service | Linter |
+|---------|--------|
+| frontend | ESLint (`npm run lint`) |
+| auth-service | flake8 (`--max-line-length=120 --exclude=.venv`) |
+| order-service | ESLint + Prisma generate |
+| book-service | ESLint + Prisma generate |
 
 ## Tests
 
