@@ -33,6 +33,7 @@ build:book-service:
   needs:
     - job: lint:book-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
     SERVICE_PATH: "./book-service"
@@ -42,6 +43,7 @@ sbom:book-service:
   needs:
     - job: build:book-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
@@ -50,6 +52,7 @@ grype:book-service:
   needs:
     - job: sbom:book-service
       artifacts: true
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
@@ -58,5 +61,6 @@ sign:book-service:
   needs:
     - job: grype:book-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "book-service"

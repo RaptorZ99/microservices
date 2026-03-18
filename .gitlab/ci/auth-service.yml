@@ -33,6 +33,7 @@ build:auth-service:
   needs:
     - job: lint:auth-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "auth-service"
     SERVICE_PATH: "./auth-service"
@@ -42,6 +43,7 @@ sbom:auth-service:
   needs:
     - job: build:auth-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "auth-service"
 
@@ -50,6 +52,7 @@ grype:auth-service:
   needs:
     - job: sbom:auth-service
       artifacts: true
+      optional: true
   variables:
     SERVICE_NAME: "auth-service"
 
@@ -58,5 +61,6 @@ sign:auth-service:
   needs:
     - job: grype:auth-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "auth-service"
