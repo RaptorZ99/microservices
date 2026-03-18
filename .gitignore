@@ -3,6 +3,7 @@
 # ============================================================
 .env
 .env.local
+cosign.key
 .env.*.local
 .env.production
 .env.staging

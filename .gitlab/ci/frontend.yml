@@ -1,8 +1,7 @@
 # ─────────────────────────────────────────────────────────
-# Pipeline Frontend (Next.js)
+# .gitlab/ci/frontend.yml
 # ─────────────────────────────────────────────────────────
 
-# Règles : s'exécute uniquement si des fichiers frontend ont changé
 .frontend:rules:
   rules:
     - changes:
@@ -24,6 +23,21 @@ lint:frontend:
     - npm ci
     - npm run lint
 
+# ── Build Docker + push multi-registry ───────────────────
+# Construit l'image Docker et la pousse vers
+# GitLab Registry et Docker Hub via le template
+# S'exécute uniquement sur develop et main (pas sur feature/*)
+# ─────────────────────────────────────────────────────────
+build:frontend:
+  stage: build
+  extends:
+    - .job:build-push
+  variables:
+    SERVICE_NAME: "frontend"
+    SERVICE_PATH: "./frontend"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
+
 notify:frontend:
   stage: lint
   image: alpine:3.19
@@ -39,33 +53,3 @@ notify:frontend:
     - 'echo "Commit   : $CI_COMMIT_SHORT_SHA"'
     - 'echo "Message  : $CI_COMMIT_TITLE"'
     - 'echo "Pipeline : $CI_PIPELINE_URL"'
-
-build:frontend:
-  stage: build
-  image: node:20-alpine
-  extends: .frontend:rules
-  cache:
-    key: "frontend-deps-$CI_COMMIT_REF_SLUG"
-    paths:
-      - frontend/node_modules/
-  script:
-    - echo "=== Build Frontend ==="
-    - cd frontend
-    - npm ci
-    - npm run build
-  artifacts:
-    paths:
-      - frontend/.next/
-    expire_in: 1 hour
-
-verify:build:frontend:
-  stage: build
-  image: alpine:3.19
-  extends: .frontend:rules
-  needs:
-    - job: build:frontend
-      artifacts: true
-  script:
-    - echo "=== Verification du build Frontend ==="
-    - test -d frontend/.next && echo "OK frontend/.next/ existe" || { echo "ERREUR frontend/.next/ manquant"; exit 1; }
-    - 'echo "Taille : $(du -sh frontend/.next | cut -f1)"'

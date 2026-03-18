@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────
-# Pipeline Auth Service (FastAPI)
+# .gitlab/ci/auth-service.yml
 # ─────────────────────────────────────────────────────────
 
 .auth:rules:
@@ -26,24 +26,13 @@ lint:auth-service:
     - .venv/bin/pip install flake8 -q
     - .venv/bin/flake8 . --count --max-line-length=120 --statistics --exclude=.venv
 
+# ── Build Docker + push multi-registry ───────────────────
 build:auth-service:
   stage: build
-  image: python:3.12-slim
-  extends: .auth:rules
-  cache:
-    key: "auth-deps-$CI_COMMIT_REF_SLUG"
-    paths:
-      - auth-service/.venv/
-  script:
-    - echo "=== Build Auth Service ==="
-    - cd auth-service
-    - python -m venv .venv
-    - .venv/bin/pip install --upgrade pip -q
-    - .venv/bin/pip install -r requirements.txt -q
-    - echo "✓ Auth Service — dépendances installées et service prêt"
-  artifacts:
-    paths:
-      - auth-service/
-    exclude:
-      - auth-service/.venv/**
-    expire_in: 1 hour
+  extends:
+    - .job:build-push
+  variables:
+    SERVICE_NAME: "auth-service"
+    SERVICE_PATH: "./auth-service"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'

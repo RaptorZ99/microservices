@@ -1,39 +1,62 @@
-# Stage 1: build
-FROM node:20-alpine AS builder
+# ─────────────────────────────────────────────────────────────────
+# book-service/Dockerfile
+# Multi-stage build — NestJS + Prisma
+# ─────────────────────────────────────────────────────────────────
 
+# ── Étape 1 : installation des dépendances ───────────────────────
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Native deps for better-sqlite3
-RUN apk add --no-cache python3 make g++
-
-COPY package*.json ./
+COPY package.json package-lock.json* ./
 RUN npm ci
 
+# ── Étape 2 : génération du client Prisma + build ────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NODE_ENV=production
-ENV PORT=9000
-ENV DATABASE_URL="file:/app/data/dev.db"
-ENV JWT_SECRET="change-me"
-ENV OPENLIBRARY_USER_AGENT="BookInsights/1.0 (contact@example.com)"
-ENV BOOK_SEARCH_LIMIT=12
+# DATABASE_URL factice uniquement pour générer les types Prisma
+ENV DATABASE_URL="file:/tmp/dev.db"
+
 RUN npx prisma generate
 RUN npm run build
 
-# Stage 2: runtime
+# ── Étape 3 : dépendances de production uniquement ───────────────
+FROM node:20-alpine AS prod-deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --only=production
+
+# ── Étape 4 : image de production ────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Native runtime dep for better-sqlite3
-RUN apk add --no-cache libstdc++
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG GIT_SOURCE
+LABEL org.opencontainers.image.title="Book Service"
+LABEL org.opencontainers.image.description="Service de livres — NestJS + Prisma + OpenLibrary"
+LABEL org.opencontainers.image.created=$BUILD_DATE
+LABEL org.opencontainers.image.revision=$GIT_COMMIT
+LABEL org.opencontainers.image.source=$GIT_SOURCE
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./
+ENV NODE_ENV=production
 
-RUN mkdir -p /app/data
+# Utilisateur non-root
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Répertoire dédié pour la base SQLite
+RUN mkdir -p /app/data && chown appuser:appgroup /app/data
+
+# Copie des artefacts nécessaires au runtime
+COPY --from=prod-deps --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/.prisma ./node_modules/.prisma
+COPY --chown=appuser:appgroup prisma ./prisma
+COPY --chown=appuser:appgroup prisma.config.ts ./
+
+USER appuser
 
 EXPOSE 9000
 

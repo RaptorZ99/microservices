@@ -21,6 +21,7 @@ workflow:
 # Inclusion des pipelines par service
 # ─────────────────────────────────────────
 include:
+  - local: '.gitlab/ci/templates/build-push.yml'
   - local: '.gitlab/ci/frontend.yml'
   - local: '.gitlab/ci/auth-service.yml'
   - local: '.gitlab/ci/order-service.yml'
