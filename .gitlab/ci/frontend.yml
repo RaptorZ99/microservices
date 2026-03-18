@@ -32,13 +32,11 @@ build:frontend:
 
 sign:frontend:
   extends: .job:sign
-  dependencies: []
   variables:
     SERVICE_NAME: "frontend"
 
 sbom:frontend:
   extends: .job:sbom
-  dependencies: []
   variables:
     SERVICE_NAME: "frontend"
 

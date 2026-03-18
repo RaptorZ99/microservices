@@ -35,13 +35,11 @@ build:book-service:
 
 sign:book-service:
   extends: .job:sign
-  dependencies: []
   variables:
     SERVICE_NAME: "book-service"
 
 sbom:book-service:
   extends: .job:sbom
-  dependencies: []
   variables:
     SERVICE_NAME: "book-service"
 
