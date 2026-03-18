@@ -26,7 +26,6 @@ lint:auth-service:
     - .venv/bin/pip install flake8 -q
     - .venv/bin/flake8 . --count --max-line-length=120 --statistics --exclude=.venv
 
-# ── Build Docker + push multi-registry ───────────────────
 build:auth-service:
   stage: build
   extends:
@@ -34,5 +33,24 @@ build:auth-service:
   variables:
     SERVICE_NAME: "auth-service"
     SERVICE_PATH: "./auth-service"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
+
+sbom:auth-service:
+  extends: .job:sbom
+  variables:
+    SERVICE_NAME: "auth-service"
+
+grype:auth-service:
+  extends: .job:grype
+  needs:
+    - job: sbom:auth-service
+      artifacts: true
+  variables:
+    SERVICE_NAME: "auth-service"
+
+sign:auth-service:
+  extends: .job:sign
+  needs:
+    - job: build:auth-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "auth-service"

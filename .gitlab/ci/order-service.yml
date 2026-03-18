@@ -26,7 +26,6 @@ lint:order-service:
     - npx prisma generate
     - npm run lint
 
-# ── Build Docker + push multi-registry ───────────────────
 build:order-service:
   stage: build
   extends:
@@ -34,5 +33,24 @@ build:order-service:
   variables:
     SERVICE_NAME: "order-service"
     SERVICE_PATH: "./order-service"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main"'
+
+sbom:order-service:
+  extends: .job:sbom
+  variables:
+    SERVICE_NAME: "order-service"
+
+grype:order-service:
+  extends: .job:grype
+  needs:
+    - job: sbom:order-service
+      artifacts: true
+  variables:
+    SERVICE_NAME: "order-service"
+
+sign:order-service:
+  extends: .job:sign
+  needs:
+    - job: build:order-service
+      artifacts: false
+  variables:
+    SERVICE_NAME: "order-service"
