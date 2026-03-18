@@ -1,18 +1,8 @@
 # ─────────────────────────────────────────────────────────────────
-# .gitlab/ci/templates/build-push.yml
+# .gitlab/ci/templates/build.yml
 #
-# Template réutilisable : build Docker + push GitLab Registry
-#
-# Usage dans un job :
-#   extends: .job:build-push
-#   variables:
-#     SERVICE_NAME: "frontend"       # nom du service (utilisé dans le tag)
-#     SERVICE_PATH: "./frontend"     # chemin vers le Dockerfile
-#
-# Variables GitLab injectées automatiquement :
-#   CI_REGISTRY, CI_REGISTRY_IMAGE, CI_REGISTRY_USER, CI_REGISTRY_PASSWORD
-#   CI_COMMIT_SHORT_SHA, CI_COMMIT_REF_SLUG, CI_COMMIT_SHA
-#   CI_PROJECT_URL, CI_COMMIT_BRANCH, CI_COMMIT_TAG
+# Stage : build
+# Template : .job:build — Build Docker + push GitLab Registry
 #
 # [Optionnel] Pour activer le push Docker Hub, décommenter les lignes
 # marquées "# DOCKERHUB" et définir les variables CI/CD :
@@ -20,7 +10,7 @@
 #   DOCKERHUB_TOKEN      token Docker Hub (masked)
 # ─────────────────────────────────────────────────────────────────
 
-.job:build-push:
+.job:build:
   image: docker:24-cli
   services:
     - docker:24-dind
@@ -31,7 +21,6 @@
     SERVICE_PATH: ""
 
   before_script:
-    # Connexion au GitLab Container Registry
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     # DOCKERHUB — décommenter pour activer le push Docker Hub :
     # - docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN

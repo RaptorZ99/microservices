@@ -1,6 +1,5 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/frontend.yml
-# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .frontend:rules:
@@ -11,7 +10,7 @@
         - .gitlab-ci.yml
 
 lint:frontend:
-  stage: lint
+  stage: verify
   image: node:20-alpine
   extends: .frontend:rules
   cache:
@@ -26,48 +25,27 @@ lint:frontend:
 
 build:frontend:
   stage: build
-  extends:
-    - .job:build-push
-  needs:
-    - job: lint:frontend
-      artifacts: false
-      optional: true
+  extends: .job:build
   variables:
     SERVICE_NAME: "frontend"
     SERVICE_PATH: "./frontend"
 
 sign:frontend:
   extends: .job:sign
-  needs:
-    - job: build:frontend
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "frontend"
 
 sbom:frontend:
   extends: .job:sbom
-  needs:
-    - job: build:frontend
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "frontend"
 
 grype:frontend:
   extends: .job:grype
-  needs:
-    - job: sbom:frontend
-      artifacts: true
-      optional: true
   variables:
     SERVICE_NAME: "frontend"
 
 check:frontend:
   extends: .job:check
-  needs:
-    - job: sign:frontend
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "frontend"
