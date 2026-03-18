@@ -52,7 +52,7 @@
 
 # ── Cosign — Signature cryptographique (main only) ──────
 .job:sign:
-  stage: scan
+  stage: sign
   image: alpine:3.19
   before_script:
     - apk add --no-cache curl jq

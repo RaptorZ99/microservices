@@ -53,7 +53,7 @@ grype:frontend:
 sign:frontend:
   extends: .job:sign
   needs:
-    - job: build:frontend
+    - job: grype:frontend
       artifacts: false
   variables:
     SERVICE_NAME: "frontend"
