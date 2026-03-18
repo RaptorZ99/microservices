@@ -30,12 +30,18 @@ build:auth-service:
   stage: build
   extends:
     - .job:build-push
+  needs:
+    - job: lint:auth-service
+      artifacts: false
   variables:
     SERVICE_NAME: "auth-service"
     SERVICE_PATH: "./auth-service"
 
 sbom:auth-service:
   extends: .job:sbom
+  needs:
+    - job: build:auth-service
+      artifacts: false
   variables:
     SERVICE_NAME: "auth-service"
 

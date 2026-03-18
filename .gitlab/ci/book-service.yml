@@ -30,12 +30,18 @@ build:book-service:
   stage: build
   extends:
     - .job:build-push
+  needs:
+    - job: lint:book-service
+      artifacts: false
   variables:
     SERVICE_NAME: "book-service"
     SERVICE_PATH: "./book-service"
 
 sbom:book-service:
   extends: .job:sbom
+  needs:
+    - job: build:book-service
+      artifacts: false
   variables:
     SERVICE_NAME: "book-service"
 

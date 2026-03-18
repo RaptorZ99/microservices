@@ -30,12 +30,18 @@ build:order-service:
   stage: build
   extends:
     - .job:build-push
+  needs:
+    - job: lint:order-service
+      artifacts: false
   variables:
     SERVICE_NAME: "order-service"
     SERVICE_PATH: "./order-service"
 
 sbom:order-service:
   extends: .job:sbom
+  needs:
+    - job: build:order-service
+      artifacts: false
   variables:
     SERVICE_NAME: "order-service"
 
