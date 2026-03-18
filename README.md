@@ -188,51 +188,62 @@ echo "127.0.0.1 devops.local" | sudo tee -a /etc/hosts
 
 **Repo** : https://gitlab.com/loulou.scarfone/microservices
 
-Pipeline GitLab CI/CD mono-repo avec jobs conditionnels par service, images Docker production-ready, et sécurité supply chain.
+Pipeline GitLab CI/CD mono-repo avec jobs conditionnels par service, images Docker production-ready, et sécurité supply chain (SBOM, scan de vulnérabilités, signature d'images).
 
 ### Workflow Gitflow simplifié
 
 | Branche | Pipeline | Environnement |
 |---------|----------|---------------|
 | `feature/*` / `hotfix/*` | verify + lint | Feedback rapide |
-| `develop` | verify + lint + build + scan (SBOM + Grype) | Staging / Dev |
-| `main` | verify + lint + build + scan (SBOM + Grype) + sign (Cosign) | Production |
+| `develop` | verify + lint + build + secure (SBOM) + validate (Grype) | Staging / Dev |
+| `main` | verify + lint + build + secure (sign + SBOM) + validate (Grype + check) | Production |
 
 - `feature/*` → `develop` via Merge Request
 - `develop` → `main` via MR + validation manuelle
 - Push direct interdit sur `main` et `develop` (branches protégées)
 - `workflow:` avec `$CI_OPEN_MERGE_REQUESTS` empêche les pipelines dupliqués (push + MR)
 
-### Stages et DAG par service
+### Architecture du pipeline — 6 stages séquentiels
 
 ```
-verify:structure          (global, toujours)
-       ↓
-  lint:SERVICE             (si fichiers du service modifiés)
-       ↓
-  build:SERVICE            (develop/main — Docker build + push GitLab Registry)
-       ↓
-  sbom:SERVICE             (develop/main — inventaire SBOM via Syft, format CycloneDX)
-       ↓
-  grype:SERVICE            (develop/main — scan de vulnérabilités depuis le SBOM)
-       ↓
-  sign:SERVICE             (main uniquement — signature Cosign de l'image)
+┌──────────┐  verify:structure + lint:* (en parallèle)
+│  verify   │  Vérification structure mono-repo + lint des services modifiés
+└────┬─────┘
+┌────┴─────┐
+│  test     │  (séances suivantes)
+└────┬─────┘
+┌────┴─────┐  build:* (en parallèle)
+│  build    │  Docker build + push GitLab Registry (tags SHA, branche, latest, semver)
+└────┬─────┘
+┌────┴─────┐  sign:*(main) + sbom:* (en parallèle)
+│  secure   │  Signature Cosign + génération SBOM CycloneDX via Syft
+└────┬─────┘
+┌────┴─────┐  grype:* + check:*(main) (en parallèle)
+│ validate  │  Scan de vulnérabilités Grype + vérification signature Cosign
+└────┬─────┘
+┌────┴─────┐
+│  deploy   │  (séances suivantes)
+└──────────┘
 ```
 
-Chaque service a sa propre chaîne DAG indépendante. Si le lint d'un service échoue, seul son build/scan est bloqué — les autres services continuent.
+**Choix de conception** : le pipeline repose sur le **stage ordering** natif de GitLab (chaque stage attend que tous les jobs du stage précédent soient terminés) plutôt que sur des dépendances `needs` inter-stages. Ce choix est motivé par :
+- **Simplicité** : pas de chaînes de dépendances fragiles à maintenir, pas de `needs: optional` pour gérer les jobs conditionnels
+- **Lisibilité** : le flux est linéaire et prévisible — verify, puis build, puis secure, puis validate
+- **Robustesse** : quand un commit ne modifie aucun service (ex: README), les stages sans jobs matchants sont simplement vides et le pipeline passe au suivant sans erreur
+- **Pattern standard** : architecture **build → secure → validate → deploy** recommandée par la CNCF pour les pipelines supply chain
 
 ### Jobs conditionnels
 
-Chaque service a ses propres `rules: changes` — seuls les jobs du service modifié s'exécutent. Les builds utilisent `$SERVICE_NAME` dans les rules `changes` du template, expansé depuis les `variables:` du job enfant.
+Chaque service a ses propres `rules: changes` — seuls les jobs du service modifié s'exécutent. Les builds utilisent `$SERVICE_NAME` dans les rules `changes` du template, expansé depuis les `variables:` du job enfant. Un changement dans `frontend/` ne déclenche pas les jobs des autres services.
 
-### Templates réutilisables
+### Templates réutilisables (1 fichier par stage)
 
-| Template | Fichier | Rôle |
-|----------|---------|------|
-| `.job:build-push` | `.gitlab/ci/templates/build-push.yml` | Build Docker + push GitLab Registry (tags SHA, branche, semver, latest) |
-| `.job:sbom` | `.gitlab/ci/templates/scan.yml` | Génération SBOM CycloneDX via Syft |
-| `.job:grype` | `.gitlab/ci/templates/scan.yml` | Scan de vulnérabilités via Grype |
-| `.job:sign` | `.gitlab/ci/templates/scan.yml` | Signature d'image via Cosign |
+| Fichier | Stage | Templates | Rôle |
+|---------|-------|-----------|------|
+| `templates/verify.yml` | verify | `verify:structure` | Vérification structure mono-repo |
+| `templates/build.yml` | build | `.job:build` | Build Docker + push GitLab Registry |
+| `templates/secure.yml` | secure | `.job:sign` + `.job:sbom` | Signature Cosign (main) + SBOM Syft |
+| `templates/validate.yml` | validate | `.job:grype` + `.job:check` | Scan Grype + vérification signature (main) |
 
 ### Dockerfiles production-ready
 

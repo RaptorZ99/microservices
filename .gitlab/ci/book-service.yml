@@ -1,6 +1,5 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/book-service.yml
-# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .book:rules:
@@ -11,7 +10,7 @@
         - .gitlab-ci.yml
 
 lint:book-service:
-  stage: lint
+  stage: verify
   image: node:20-alpine
   extends: .book:rules
   cache:
@@ -29,48 +28,27 @@ lint:book-service:
 
 build:book-service:
   stage: build
-  extends:
-    - .job:build-push
-  needs:
-    - job: lint:book-service
-      artifacts: false
-      optional: true
+  extends: .job:build
   variables:
     SERVICE_NAME: "book-service"
     SERVICE_PATH: "./book-service"
 
 sign:book-service:
   extends: .job:sign
-  needs:
-    - job: build:book-service
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
 sbom:book-service:
   extends: .job:sbom
-  needs:
-    - job: build:book-service
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
 grype:book-service:
   extends: .job:grype
-  needs:
-    - job: sbom:book-service
-      artifacts: true
-      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
 check:book-service:
   extends: .job:check
-  needs:
-    - job: sign:book-service
-      artifacts: false
-      optional: true
   variables:
     SERVICE_NAME: "book-service"

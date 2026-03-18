@@ -18,14 +18,13 @@ workflow:
     - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
 
 # ─────────────────────────────────────────
-# Templates et pipelines par service
+# Templates (1 par stage) + pipelines par service
 # ─────────────────────────────────────────
 include:
-  - local: '.gitlab/ci/templates/build-push.yml'
-  - local: '.gitlab/ci/templates/sign.yml'
-  - local: '.gitlab/ci/templates/artifact.yml'
-  - local: '.gitlab/ci/templates/scan.yml'
-  - local: '.gitlab/ci/templates/check.yml'
+  - local: '.gitlab/ci/templates/verify.yml'
+  - local: '.gitlab/ci/templates/build.yml'
+  - local: '.gitlab/ci/templates/secure.yml'
+  - local: '.gitlab/ci/templates/validate.yml'
   - local: '.gitlab/ci/frontend.yml'
   - local: '.gitlab/ci/auth-service.yml'
   - local: '.gitlab/ci/order-service.yml'
@@ -35,56 +34,9 @@ include:
 # Ordre des stages (global)
 # ─────────────────────────────────────────
 stages:
-  - verify    # Vérification de la structure du mono-repo
-  - lint      # Vérification du style et de la syntaxe
+  - verify    # Vérification structure + lint
   - test      # Tests automatisés (séances suivantes)
   - build     # Build Docker + push GitLab Registry
-  - sign      # Signature Cosign (main uniquement)
-  - artifact  # Génération SBOM (Syft)
-  - scan      # Scan de vulnérabilités (Grype)
-  - check     # Vérification de la signature (main uniquement)
+  - secure    # Signature Cosign (main) + SBOM Syft
+  - validate  # Scan Grype + vérification signature (main)
   - deploy    # Déploiement (séances suivantes)
-
-# ─────────────────────────────────────────
-# Règles globales réutilisables par branche
-# ─────────────────────────────────────────
-
-.rules:all:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-    - if: '$CI_COMMIT_BRANCH =~ /^feature\//'
-    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-.rules:deploy-branches:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-.rules:develop:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-
-.rules:main:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-# ─────────────────────────────────────────
-# Job de vérification de la structure
-# ─────────────────────────────────────────
-verify:structure:
-  stage: verify
-  image: alpine:3.19
-  script:
-    - echo "=== Environnement $APP_ENV ==="
-    - echo "=== Verification de la structure du mono-repo ==="
-    - test -d frontend && echo "OK frontend/" || { echo "MANQUANT frontend/"; exit 1; }
-    - test -f frontend/Dockerfile && echo "OK frontend/Dockerfile" || { echo "MANQUANT frontend/Dockerfile"; exit 1; }
-    - test -d auth-service && echo "OK auth-service/" || { echo "MANQUANT auth-service/"; exit 1; }
-    - test -f auth-service/Dockerfile && echo "OK auth-service/Dockerfile" || { echo "MANQUANT auth-service/Dockerfile"; exit 1; }
-    - test -d order-service && echo "OK order-service/" || { echo "MANQUANT order-service/"; exit 1; }
-    - test -f order-service/Dockerfile && echo "OK order-service/Dockerfile" || { echo "MANQUANT order-service/Dockerfile"; exit 1; }
-    - test -d book-service && echo "OK book-service/" || { echo "MANQUANT book-service/"; exit 1; }
-    - test -f book-service/Dockerfile && echo "OK book-service/Dockerfile" || { echo "MANQUANT book-service/Dockerfile"; exit 1; }
-    - echo "=== Structure OK ==="
