@@ -1,5 +1,6 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/auth-service.yml
+# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .auth:rules:
@@ -38,6 +39,15 @@ build:auth-service:
     SERVICE_NAME: "auth-service"
     SERVICE_PATH: "./auth-service"
 
+sign:auth-service:
+  extends: .job:sign
+  needs:
+    - job: build:auth-service
+      artifacts: false
+      optional: true
+  variables:
+    SERVICE_NAME: "auth-service"
+
 sbom:auth-service:
   extends: .job:sbom
   needs:
@@ -56,10 +66,10 @@ grype:auth-service:
   variables:
     SERVICE_NAME: "auth-service"
 
-sign:auth-service:
-  extends: .job:sign
+check:auth-service:
+  extends: .job:check
   needs:
-    - job: grype:auth-service
+    - job: sign:auth-service
       artifacts: false
       optional: true
   variables:

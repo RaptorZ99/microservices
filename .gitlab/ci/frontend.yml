@@ -1,5 +1,6 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/frontend.yml
+# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .frontend:rules:
@@ -35,6 +36,15 @@ build:frontend:
     SERVICE_NAME: "frontend"
     SERVICE_PATH: "./frontend"
 
+sign:frontend:
+  extends: .job:sign
+  needs:
+    - job: build:frontend
+      artifacts: false
+      optional: true
+  variables:
+    SERVICE_NAME: "frontend"
+
 sbom:frontend:
   extends: .job:sbom
   needs:
@@ -53,10 +63,10 @@ grype:frontend:
   variables:
     SERVICE_NAME: "frontend"
 
-sign:frontend:
-  extends: .job:sign
+check:frontend:
+  extends: .job:check
   needs:
-    - job: grype:frontend
+    - job: sign:frontend
       artifacts: false
       optional: true
   variables:
