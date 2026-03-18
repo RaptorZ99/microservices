@@ -1,41 +1,19 @@
 # ─────────────────────────────────────────────────────────────────
 # .gitlab/ci/templates/scan.yml
 #
-# Templates réutilisables : SBOM (Syft) + Grype + Cosign
+# Template : scan de vulnérabilités via Grype
+# Stage : scan (develop + main)
 #
-# Usage dans un job :
-#   extends: .job:sbom        # ou .job:grype ou .job:sign
+# Usage :
+#   extends: .job:grype
+#   needs:
+#     - job: sbom:SERVICE
+#       artifacts: true
+#       optional: true
 #   variables:
 #     SERVICE_NAME: "frontend"
-#
-# Variables GitLab requises pour Cosign :
-#   COSIGN_PRIVATE_KEY   clé privée (type File)
-#   COSIGN_PUBLIC_KEY    clé publique (type Variable)
-#   COSIGN_PASSWORD      passphrase (masked)
 # ─────────────────────────────────────────────────────────────────
 
-# ── SBOM — Inventaire des composants via Syft ───────────
-.job:sbom:
-  stage: scan
-  image: alpine:3.19
-  before_script:
-    - apk add --no-cache curl
-    - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-  script:
-    - IMAGE_GITLAB="$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA"
-    - echo "=== Generation du SBOM pour $SERVICE_NAME ==="
-    - syft "$IMAGE_GITLAB" -o cyclonedx-json --file "sbom-$SERVICE_NAME.json"
-    - echo "SBOM genere sbom-$SERVICE_NAME.json"
-  artifacts:
-    name: "sbom-$SERVICE_NAME-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - "sbom-*.json"
-    expire_in: 30 days
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-# ── Grype — Scan de vulnerabilites ──────────────────────
 .job:grype:
   stage: scan
   image: alpine:3.19
@@ -48,25 +26,4 @@
     - echo "Scan termine"
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-# ── Cosign — Signature cryptographique (main only) ──────
-.job:sign:
-  stage: sign
-  image: alpine:3.19
-  before_script:
-    - apk add --no-cache curl jq
-    - curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
-    - chmod +x /usr/local/bin/cosign
-    - curl https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)' > /tmp/signing-config.json
-    - echo "$COSIGN_PUBLIC_KEY" > /tmp/cosign.pub
-  script:
-    - IMAGE_GITLAB="$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA"
-    - echo "=== Signature de $IMAGE_GITLAB ==="
-    - echo "$CI_REGISTRY_PASSWORD" | cosign login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
-    - cosign sign --key "$COSIGN_PRIVATE_KEY" --signing-config /tmp/signing-config.json "$IMAGE_GITLAB"
-    - echo "Image signee"
-    - cosign verify --key /tmp/cosign.pub --insecure-ignore-tlog=true "$IMAGE_GITLAB"
-    - echo "Signature verifiee"
-  rules:
     - if: '$CI_COMMIT_BRANCH == "main"'

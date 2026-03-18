@@ -18,11 +18,14 @@ workflow:
     - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
 
 # ─────────────────────────────────────────
-# Inclusion des pipelines par service
+# Templates et pipelines par service
 # ─────────────────────────────────────────
 include:
   - local: '.gitlab/ci/templates/build-push.yml'
+  - local: '.gitlab/ci/templates/sign.yml'
+  - local: '.gitlab/ci/templates/artifact.yml'
   - local: '.gitlab/ci/templates/scan.yml'
+  - local: '.gitlab/ci/templates/check.yml'
   - local: '.gitlab/ci/frontend.yml'
   - local: '.gitlab/ci/auth-service.yml'
   - local: '.gitlab/ci/order-service.yml'
@@ -34,17 +37,18 @@ include:
 stages:
   - verify    # Vérification de la structure du mono-repo
   - lint      # Vérification du style et de la syntaxe
-  - build     # Compilation et packaging
   - test      # Tests automatisés (séances suivantes)
-  - scan      # SBOM + Grype (vulnérabilités)
+  - build     # Build Docker + push GitLab Registry
   - sign      # Signature Cosign (main uniquement)
+  - artifact  # Génération SBOM (Syft)
+  - scan      # Scan de vulnérabilités (Grype)
+  - check     # Vérification de la signature (main uniquement)
   - deploy    # Déploiement (séances suivantes)
 
 # ─────────────────────────────────────────
 # Règles globales réutilisables par branche
 # ─────────────────────────────────────────
 
-# S'exécute sur toutes les branches actives
 .rules:all:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -53,25 +57,21 @@ stages:
     - if: '$CI_COMMIT_BRANCH =~ /^hotfix\//'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
-# S'exécute uniquement sur develop et main (branches de déploiement)
 .rules:deploy-branches:
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_BRANCH == "main"'
 
-# S'exécute uniquement sur develop (env DEV)
 .rules:develop:
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
 
-# S'exécute uniquement sur main (env PROD)
 .rules:main:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
 # ─────────────────────────────────────────
 # Job de vérification de la structure
-# (s'exécute sur toutes les branches)
 # ─────────────────────────────────────────
 verify:structure:
   stage: verify

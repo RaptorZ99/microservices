@@ -1,5 +1,6 @@
 # ─────────────────────────────────────────────────────────
 # .gitlab/ci/book-service.yml
+# DAG: lint → build → sign(main) → sbom → grype → check(main)
 # ─────────────────────────────────────────────────────────
 
 .book:rules:
@@ -33,15 +34,26 @@ build:book-service:
   needs:
     - job: lint:book-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
     SERVICE_PATH: "./book-service"
+
+sign:book-service:
+  extends: .job:sign
+  needs:
+    - job: build:book-service
+      artifacts: false
+      optional: true
+  variables:
+    SERVICE_NAME: "book-service"
 
 sbom:book-service:
   extends: .job:sbom
   needs:
     - job: build:book-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
@@ -50,13 +62,15 @@ grype:book-service:
   needs:
     - job: sbom:book-service
       artifacts: true
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
 
-sign:book-service:
-  extends: .job:sign
+check:book-service:
+  extends: .job:check
   needs:
-    - job: grype:book-service
+    - job: sign:book-service
       artifacts: false
+      optional: true
   variables:
     SERVICE_NAME: "book-service"
