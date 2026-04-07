@@ -35,23 +35,28 @@ build:order-service:
 
 sign:order-service:
   extends: .job:sign
+  needs:
+    - build:order-service
   variables:
     SERVICE_NAME: "order-service"
 
 sbom:order-service:
   extends: .job:sbom
+  needs:
+    - build:order-service
   variables:
     SERVICE_NAME: "order-service"
 
 grype:order-service:
   extends: .job:grype
-  dependencies:
+  needs:
     - sbom:order-service
   variables:
     SERVICE_NAME: "order-service"
 
 check:order-service:
   extends: .job:check
-  dependencies: []
+  needs:
+    - sign:order-service
   variables:
     SERVICE_NAME: "order-service"

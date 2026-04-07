@@ -35,23 +35,28 @@ build:book-service:
 
 sign:book-service:
   extends: .job:sign
+  needs:
+    - build:book-service
   variables:
     SERVICE_NAME: "book-service"
 
 sbom:book-service:
   extends: .job:sbom
+  needs:
+    - build:book-service
   variables:
     SERVICE_NAME: "book-service"
 
 grype:book-service:
   extends: .job:grype
-  dependencies:
+  needs:
     - sbom:book-service
   variables:
     SERVICE_NAME: "book-service"
 
 check:book-service:
   extends: .job:check
-  dependencies: []
+  needs:
+    - sign:book-service
   variables:
     SERVICE_NAME: "book-service"
