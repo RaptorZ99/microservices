@@ -26,6 +26,26 @@ lint:book-service:
     - npx prisma generate
     - npm run lint
 
+test:unit:book-service:
+  stage: test
+  image: node:20-alpine
+  extends: .book:rules
+  cache:
+    key: "book-deps-$CI_COMMIT_REF_SLUG"
+    paths:
+      - book-service/node_modules/
+  variables:
+    DATABASE_URL: "file:/tmp/dev.db"
+  script:
+    - cd book-service
+    - npm ci
+    - npx prisma generate
+    - npm test -- --ci
+  artifacts:
+    reports:
+      junit: book-service/junit.xml
+    expire_in: 1 week
+
 build:book-service:
   stage: build
   extends: .job:build

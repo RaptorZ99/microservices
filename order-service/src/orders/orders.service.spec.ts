@@ -1,80 +1,160 @@
+/**
+ * Tests unitaires de OrdersService
+ *
+ * PrismaService est remplacé par un mock complet :
+ * aucune connexion à la base de données n'est établie.
+ * Pattern AAA : Arrange / Act / Assert.
+ */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+// ─────────────────────────────────────────────────────────────────
+// Mock de PrismaService
+// ─────────────────────────────────────────────────────────────────
+const mockPrismaService = {
+  order: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+};
+
 describe('OrdersService', () => {
   let service: OrdersService;
-  const prisma = {
-    order: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      deleteMany: jest.fn(),
-    },
-  } as unknown as PrismaService;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [OrdersService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        OrdersService,
+        { provide: PrismaService, useValue: mockPrismaService },
+      ],
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
+    jest.clearAllMocks();
   });
 
-  it('create() should persist an order for the given user', async () => {
-    const order = { id: 1, user: 'u1', item: 'book', createdAt: new Date() };
-    prisma.order.create.mockResolvedValue(order);
+  // ─────────────────────────────────────────────────────────────────
+  // create()
+  // ─────────────────────────────────────────────────────────────────
+  describe('create()', () => {
+    it('doit créer une commande et la retourner', async () => {
+      // Arrange
+      const user = 'alice';
+      const dto = { item: 'Laptop' };
+      const expected = { id: 1, user, item: 'Laptop', createdAt: new Date() };
+      mockPrismaService.order.create.mockResolvedValue(expected);
 
-    const result = await service.create('u1', { item: 'book' });
+      // Act
+      const result = await service.create(user, dto);
 
-    expect(prisma.order.create).toHaveBeenCalledWith({
-      data: { user: 'u1', item: 'book' },
+      // Assert — résultat correct
+      expect(result).toEqual(expected);
+      // Assert — Prisma appelé avec les bons arguments
+      expect(mockPrismaService.order.create).toHaveBeenCalledWith({
+        data: { user, item: dto.item },
+      });
     });
-    expect(result).toEqual(order);
   });
 
-  it('findAll() should return user orders sorted by date desc', async () => {
-    const orders = [
-      { id: 2, user: 'u1', item: 'pen', createdAt: new Date('2023-01-02') },
-      { id: 1, user: 'u1', item: 'book', createdAt: new Date('2023-01-01') },
-    ];
-    prisma.order.findMany.mockResolvedValue(orders);
+  // ─────────────────────────────────────────────────────────────────
+  // findAll()
+  // ─────────────────────────────────────────────────────────────────
+  describe('findAll()', () => {
+    it("doit retourner la liste des commandes de l'utilisateur", async () => {
+      // Arrange
+      const user = 'alice';
+      const expected = [
+        { id: 1, user, item: 'Laptop', createdAt: new Date() },
+        { id: 2, user, item: 'Mouse', createdAt: new Date() },
+      ];
+      mockPrismaService.order.findMany.mockResolvedValue(expected);
 
-    const result = await service.findAll('u1');
+      // Act
+      const result = await service.findAll(user);
 
-    expect(prisma.order.findMany).toHaveBeenCalledWith({
-      where: { user: 'u1' },
-      orderBy: { createdAt: 'desc' },
+      // Assert
+      expect(result).toEqual(expected);
+      expect(mockPrismaService.order.findMany).toHaveBeenCalledWith({
+        where: { user },
+        orderBy: { createdAt: 'desc' },
+      });
     });
-    expect(result).toEqual(orders);
+
+    it("doit retourner un tableau vide si l'utilisateur n'a pas de commandes", async () => {
+      // Arrange
+      mockPrismaService.order.findMany.mockResolvedValue([]);
+
+      // Act
+      const result = await service.findAll('user-sans-commande');
+
+      // Assert
+      expect(result).toEqual([]);
+    });
   });
 
-  it('findOne() should fetch a single order for the user', async () => {
-    const order = {
-      id: 3,
-      user: 'u1',
-      item: 'notebook',
-      createdAt: new Date(),
-    };
-    prisma.order.findFirst.mockResolvedValue(order);
+  // ─────────────────────────────────────────────────────────────────
+  // findOne()
+  // ─────────────────────────────────────────────────────────────────
+  describe('findOne()', () => {
+    it("doit retourner la commande si elle appartient à l'utilisateur", async () => {
+      // Arrange
+      const user = 'alice';
+      const order = { id: 1, user, item: 'Laptop', createdAt: new Date() };
+      mockPrismaService.order.findFirst.mockResolvedValue(order);
 
-    const result = await service.findOne(3, 'u1');
+      // Act
+      const result = await service.findOne(1, user);
 
-    expect(prisma.order.findFirst).toHaveBeenCalledWith({
-      where: { id: 3, user: 'u1' },
+      // Assert
+      expect(result).toEqual(order);
+      expect(mockPrismaService.order.findFirst).toHaveBeenCalledWith({
+        where: { id: 1, user },
+      });
     });
-    expect(result).toEqual(order);
+
+    it("doit retourner null si la commande n'existe pas", async () => {
+      // Arrange
+      mockPrismaService.order.findFirst.mockResolvedValue(null);
+
+      // Act
+      const result = await service.findOne(999, 'alice');
+
+      // Assert
+      expect(result).toBeNull();
+    });
   });
 
-  it('remove() should delete order scoped to user', async () => {
-    prisma.order.deleteMany.mockResolvedValue({ count: 1 } as any);
+  // ─────────────────────────────────────────────────────────────────
+  // remove()
+  // ─────────────────────────────────────────────────────────────────
+  describe('remove()', () => {
+    it('doit supprimer la commande et retourner le nombre de lignes supprimées', async () => {
+      // Arrange
+      mockPrismaService.order.deleteMany.mockResolvedValue({ count: 1 });
 
-    const result = await service.remove(5, 'u1');
+      // Act
+      const result = await service.remove(1, 'alice');
 
-    expect(prisma.order.deleteMany).toHaveBeenCalledWith({
-      where: { id: 5, user: 'u1' },
+      // Assert
+      expect(result).toEqual({ count: 1 });
+      expect(mockPrismaService.order.deleteMany).toHaveBeenCalledWith({
+        where: { id: 1, user: 'alice' },
+      });
     });
-    expect(result).toEqual({ count: 1 });
+
+    it("doit retourner count: 0 si la commande n'appartient pas à l'utilisateur", async () => {
+      // Arrange
+      mockPrismaService.order.deleteMany.mockResolvedValue({ count: 0 });
+
+      // Act
+      const result = await service.remove(1, 'autre-user');
+
+      // Assert
+      expect(result).toEqual({ count: 0 });
+    });
   });
 });

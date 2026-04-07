@@ -26,6 +26,26 @@ lint:order-service:
     - npx prisma generate
     - npm run lint
 
+test:unit:order-service:
+  stage: test
+  image: node:20-alpine
+  extends: .order:rules
+  cache:
+    key: "order-deps-$CI_COMMIT_REF_SLUG"
+    paths:
+      - order-service/node_modules/
+  variables:
+    DATABASE_URL: "file:/tmp/dev.db"
+  script:
+    - cd order-service
+    - npm ci
+    - npx prisma generate
+    - npm test -- --ci
+  artifacts:
+    reports:
+      junit: order-service/junit.xml
+    expire_in: 1 week
+
 build:order-service:
   stage: build
   extends: .job:build

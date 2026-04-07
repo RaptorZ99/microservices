@@ -26,6 +26,25 @@ lint:auth-service:
     - .venv/bin/pip install flake8 -q
     - .venv/bin/flake8 . --count --max-line-length=120 --statistics --exclude=.venv
 
+test:unit:auth-service:
+  stage: test
+  image: python:3.12-slim
+  extends: .auth:rules
+  cache:
+    key: "auth-deps-$CI_COMMIT_REF_SLUG"
+    paths:
+      - auth-service/.venv/
+  script:
+    - cd auth-service
+    - python -m venv .venv
+    - .venv/bin/pip install --upgrade pip -q
+    - .venv/bin/pip install -r requirements.txt -r requirements-dev.txt -q
+    - .venv/bin/pytest tests/unit/ -v --junitxml=unit-report.xml
+  artifacts:
+    reports:
+      junit: auth-service/unit-report.xml
+    expire_in: 1 week
+
 build:auth-service:
   stage: build
   extends: .job:build

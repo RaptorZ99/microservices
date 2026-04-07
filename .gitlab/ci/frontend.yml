@@ -23,6 +23,23 @@ lint:frontend:
     - npm ci
     - npm run lint
 
+test:unit:frontend:
+  stage: test
+  image: node:20-alpine
+  extends: .frontend:rules
+  cache:
+    key: "frontend-deps-$CI_COMMIT_REF_SLUG"
+    paths:
+      - frontend/node_modules/
+  script:
+    - cd frontend
+    - npm ci
+    - npx jest --ci
+  artifacts:
+    reports:
+      junit: frontend/junit.xml
+    expire_in: 1 week
+
 build:frontend:
   stage: build
   extends: .job:build
