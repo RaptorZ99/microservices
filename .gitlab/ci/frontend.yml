@@ -32,23 +32,28 @@ build:frontend:
 
 sign:frontend:
   extends: .job:sign
+  needs:
+    - build:frontend
   variables:
     SERVICE_NAME: "frontend"
 
 sbom:frontend:
   extends: .job:sbom
+  needs:
+    - build:frontend
   variables:
     SERVICE_NAME: "frontend"
 
 grype:frontend:
   extends: .job:grype
-  dependencies:
+  needs:
     - sbom:frontend
   variables:
     SERVICE_NAME: "frontend"
 
 check:frontend:
   extends: .job:check
-  dependencies: []
+  needs:
+    - sign:frontend
   variables:
     SERVICE_NAME: "frontend"
